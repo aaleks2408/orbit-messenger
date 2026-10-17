@@ -1,0 +1,3181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbit OS — Мессенджер нового поколения</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap');
+
+    :root {
+      --accent: #38bdf8;
+      --accent-dark: #1e3a5f;
+      --msg-size: 14.5px;
+      --msg-radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      background-color: #040811;
+      background-image:
+        radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.12) 0%, transparent 42%),
+        radial-gradient(circle at 82% 88%, rgba(168, 85, 247, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, #0b1528 0%, #040811 100%);
+      color: #ffffff;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+    }
+
+    /* Фоновый холст 3D-орбит */
+    #orbitCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      transition: transform 1.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease;
+    }
+
+    /* Интро-заставка */
+    #introOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      background: radial-gradient(circle at center, rgba(10, 18, 32, 0.45) 0%, #03060c 100%);
+      transition: opacity 0.9s ease, transform 0.9s ease;
+    }
+
+    .intro-hidden {
+      opacity: 0 !important;
+      transform: scale(1.14) !important;
+    }
+
+    .orbit-title {
+      letter-spacing: 0.52em;
+      text-indent: 0.52em;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeUpTitle 1.1s ease 0.3s forwards;
+    }
+
+    .orbit-subtitle {
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUpTitle 1.1s ease 0.8s forwards;
+    }
+
+    @keyframes fadeUpTitle {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Уникальный дизайн парящих стеклянных капсул Orbit OS */
+    .orbit-dock {
+      background: rgba(11, 18, 31, 0.72);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow:
+        0 24px 60px -12px rgba(0, 0, 0, 0.75),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .orbit-input {
+      background: rgba(5, 10, 20, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      color: #ffffff;
+    }
+
+    .orbit-input:focus {
+      background: rgba(15, 25, 45, 0.75);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18), 0 0 20px rgba(56, 189, 248, 0.12);
+      outline: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 8px 25px rgba(56, 189, 248, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0) scale(0.98);
+    }
+
+    /* Экраны */
+    #authContainer {
+      position: relative;
+      z-index: 20;
+      height: 100vh;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      opacity: 0;
+      transform: translateY(24px) scale(0.96);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    #authContainer.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    #messengerContainer {
+      position: relative;
+      z-index: 30;
+      height: 100vh;
+      width: 100vw;
+      padding: 14px;
+      gap: 14px;
+      display: none;
+      opacity: 0;
+      transform: scale(0.985);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    #messengerContainer.active {
+      display: flex;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Эксклюзивная метка СОЗДАТЕЛЬ ORBIT */
+    @keyframes creatorShimmer {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .creator-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffffff;
+      background: linear-gradient(120deg, #f59e0b, #ec4899, #8b5cf6, #38bdf8, #f59e0b);
+      background-size: 300% 300%;
+      animation: creatorShimmer 4s ease infinite;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+      flex-shrink: 0;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+
+    /* Сообщения */
+    .msg-row { display: flex; width: 100%; margin-bottom: 10px; position: relative; }
+    .msg-row.animate-in { animation: msgSlideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .msg-bubble {
+      max-width: 68%;
+      padding: 10px 14px;
+      border-radius: var(--msg-radius);
+      font-size: var(--msg-size);
+      line-height: 1.45;
+      word-wrap: break-word;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+    .msg-sent {
+      background: linear-gradient(135deg, var(--accent-dark) 0%, rgba(30, 58, 138, 0.85) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #ffffff;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-received {
+      background: rgba(20, 30, 48, 0.88);
+      color: #ffffff;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    @keyframes msgSlideUp {
+      0% { opacity: 0; transform: translateY(12px) scale(0.96); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .chat-item {
+      transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+      cursor: pointer;
+      border-radius: 16px;
+      margin: 4px 8px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+    }
+    .chat-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.06);
+      transform: translateX(3px);
+    }
+    .chat-item.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.18) 0%, rgba(99, 102, 241, 0.15) 100%);
+      border-color: rgba(56, 189, 248, 0.38);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Панели и модальные окна */
+    #settingsPanel {
+      transform: translateX(-106%);
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 50;
+    }
+    #settingsPanel.open { transform: translateX(0); }
+
+    #adminPanel {
+      transform: translateY(106%);
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 55;
+    }
+    #adminPanel.open { transform: translateY(0); }
+
+    .modal-backdrop { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+    .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    .modal-card { transform: scale(0.94) translateY(10px); transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+    .modal-backdrop.open .modal-card { transform: scale(1) translateY(0); }
+
+    .theme-btn { border: 2px solid rgba(255, 255, 255, 0.12); opacity: 0.7; transition: all 0.2s; }
+    .theme-btn:hover { opacity: 0.95; }
+    .theme-btn.active-theme { opacity: 1; border-color: #ffffff; box-shadow: 0 0 0 2px var(--accent); transform: scale(1.03); }
+
+    .delete-msg-btn { opacity: 0; transition: opacity 0.2s; margin: 0 8px; align-self: flex-end; padding-bottom: 4px; }
+    .msg-row:hover .delete-msg-btn { opacity: 1; }
+
+    audio { height: 36px; max-width: 240px; border-radius: 20px; outline: none; }
+    video.circle-video { width: 220px; height: 220px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); background: #000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    #liveVideoPreview { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 3px solid #f43f5e; position: absolute; bottom: 80px; right: 20px; z-index: 40; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    #liveVideoPreview.recording { transform: scale(1); }
+
+    /* ==========================================================
+       РЕАЛИСТИЧНЫЕ 3D-АРТЕФАКТЫ, КАРТОЧКИ NFT И АНИМАЦИЯ АПГРЕЙДА
+       ========================================================== */
+    @keyframes floatArtifact {
+      0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+      50% { transform: translateY(-7px) rotate(2.5deg) scale(1.04); }
+    }
+
+    @keyframes holoBorderFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes auraSpin {
+      0% { transform: rotate(0deg) scale(0.95); opacity: 0.45; }
+      50% { transform: rotate(180deg) scale(1.08); opacity: 0.8; }
+      100% { transform: rotate(360deg) scale(0.95); opacity: 0.45; }
+    }
+
+    @keyframes upgradeSpinPulse {
+      0% { transform: scale(0.92) rotate(0deg); filter: brightness(1) drop-shadow(0 0 15px rgba(56, 189, 248, 0.5)); }
+      50% { transform: scale(1.12) rotate(8deg); filter: brightness(1.35) drop-shadow(0 0 35px rgba(236, 72, 153, 0.9)); }
+      100% { transform: scale(0.92) rotate(-8deg); filter: brightness(1) drop-shadow(0 0 15px rgba(168, 85, 247, 0.5)); }
+    }
+
+    @keyframes revealFlash {
+      0% { opacity: 1; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.22); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .artifact-3d-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: floatArtifact 3.6s ease-in-out infinite;
+      filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.55));
+    }
+
+    .upgrading-artifact {
+      animation: upgradeSpinPulse 0.38s ease-in-out infinite alternate !important;
+    }
+
+    .upgraded-flash {
+      animation: revealFlash 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+    }
+
+    .nft-aura-ring {
+      position: absolute;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 1.5px dashed rgba(255, 255, 255, 0.3);
+      box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.15);
+      animation: auraSpin 10s linear infinite;
+      pointer-events: none;
+    }
+
+    /* Карточка обычного подарка */
+    .gift-card-normal {
+      position: relative;
+      border-radius: 18px;
+      background: linear-gradient(165deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      transition: all 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    .gift-card-normal:hover {
+      transform: translateY(-4px) scale(1.025);
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 12px 28px -4px rgba(56, 189, 248, 0.28);
+    }
+
+    /* Карточка уникального коллекционного NFT */
+    .gift-card-nft {
+      position: relative;
+      border-radius: 20px;
+      padding: 2px;
+      background: linear-gradient(135deg, #38bdf8, #a855f7, #ec4899, #f59e0b, #10b981, #38bdf8);
+      background-size: 350% 350%;
+      animation: holoBorderFlow 6s ease infinite;
+      cursor: pointer;
+      transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 10px 30px -5px rgba(168, 85, 247, 0.45);
+    }
+    .gift-card-nft:hover {
+      transform: translateY(-5px) scale(1.035);
+      box-shadow: 0 16px 36px -4px rgba(236, 72, 153, 0.6);
+    }
+
+    .gift-card-nft-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 8px 9px;
+    }
+
+    /* Скрытый подарок в профиле владельца */
+    .gift-hidden-state {
+      opacity: 0.48;
+      filter: saturate(0.4);
+    }
+    .gift-hidden-state:hover {
+      opacity: 0.92;
+      filter: saturate(1);
+    }
+
+    /* Геометрические паттерны фона NFT */
+    .nft-pattern-overlay {
+      position: absolute;
+      inset: 0;
+      opacity: 0.2;
+      background-image:
+        radial-gradient(rgba(255, 255, 255, 0.65) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 16px 16px, 32px 32px, 32px 32px;
+      pointer-events: none;
+    }
+
+    /* Голографический луч */
+    .nft-glare {
+      position: absolute;
+      inset: -80%;
+      background: linear-gradient(45deg, transparent 42%, rgba(255, 255, 255, 0.24) 50%, transparent 58%);
+      transform: rotate(25deg);
+      animation: nftGlareMove 4.5s infinite ease-in-out;
+      pointer-events: none;
+    }
+    @keyframes nftGlareMove {
+      0% { transform: translateX(-75%) rotate(25deg); }
+      100% { transform: translateX(75%) rotate(25deg); }
+    }
+
+    /* Диагональная лента NFT */
+    .nft-corner-ribbon {
+      position: absolute;
+      top: 7px;
+      right: -24px;
+      width: 80px;
+      background: linear-gradient(90deg, #9333ea, #db2777);
+      color: #fff;
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-align: center;
+      transform: rotate(40deg);
+      padding: 2px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      z-index: 15;
+    }
+
+    #giftInspectStage { perspective: 1100px; }
+    #giftInspectCard3D { transform-style: preserve-3d; transition: transform 0.12s ease-out; }
+  </style>
+</head>
+<body>
+
+  <!-- Фон орбиты -->
+  <canvas id="orbitCanvas"></canvas>
+
+  <!-- Интро -->
+  <div id="introOverlay">
+    <h1 class="orbit-title text-4xl md:text-6xl font-black mb-3">ORBIT</h1>
+    <p class="orbit-subtitle text-xs md:text-sm uppercase tracking-[0.38em] text-sky-300/80">Связь на новой орбите</p>
+  </div>
+
+  <!-- Уведомление -->
+  <div id="toast" class="fixed top-5 right-5 z-[140] px-4 py-3 rounded-2xl bg-[#0f172a]/95 border border-sky-400/35 text-white text-xs font-semibold shadow-2xl flex items-center gap-2.5 opacity-0 pointer-events-none translate-y-[-12px] transition-all duration-300">
+    <span id="toastDot" class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+    <span id="toastText">Сохранено</span>
+  </div>
+
+  <!-- Лайтбокс для изображений -->
+  <div id="imageLightbox" class="modal-backdrop fixed inset-0 z-[110] bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" class="modal-card max-w-[90vw] max-h-[88vh] rounded-2xl shadow-2xl object-contain border border-white/10" />
+  </div>
+
+  <!-- =========================================================================
+       МОДАЛЬНОЕ ОКНО 3D-ОСМОТРА, СКРЫТИЯ, ПЕРЕДАЧИ И РУЛЕТКИ АПГРЕЙДА В NFT
+       ========================================================================= -->
+  <div id="giftInspectModal" class="modal-backdrop fixed inset-0 z-[115] bg-black/85 backdrop-blur-lg flex items-center justify-center p-4">
+    <div class="modal-card orbit-dock w-full max-w-md max-h-[92vh] flex flex-col rounded-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.9)] relative">
+      
+      <button type="button" id="closeInspectBtn" onclick="window.closeGiftInspect()" class="absolute top-3.5 right-3.5 z-30 w-8 h-8 rounded-full bg-black/40 text-white/80 hover:text-white flex items-center justify-center transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <!-- Верхняя 3D-сцена подарка / Камера Синтеза NFT -->
+      <div id="giftInspectStage" class="relative h-64 flex-shrink-0 flex flex-col items-center justify-center p-6 overflow-hidden transition-all duration-300">
+        <div id="giftInspectBg" class="absolute inset-0 transition-all duration-300"></div>
+        <div class="nft-pattern-overlay"></div>
+        <div id="giftInspectGlare" class="nft-glare hidden"></div>
+
+        <!-- Кольцо синтеза при улучшении -->
+        <div id="upgradeAuraRing" class="hidden absolute w-48 h-48 rounded-full border-2 border-dashed border-white/40 animate-spin" style="animation-duration: 3s;"></div>
+
+        <!-- Вращающаяся 3D-карточка с артефактом -->
+        <div id="giftInspectCard3D" class="relative z-10 flex flex-col items-center">
+          <div id="giftInspectBadgeTop" class="mb-2"></div>
+          <div id="giftInspectArtwork" class="w-28 h-28 flex items-center justify-center artifact-3d-wrapper"></div>
+        </div>
+
+        <!-- Живой индикатор рулетки во время улучшения -->
+        <div id="upgradeRouletteBanner" class="hidden absolute bottom-3 inset-x-4 z-20 px-4 py-2 rounded-2xl bg-black/75 backdrop-blur-md border border-white/15 flex items-center justify-between text-xs">
+          <span id="rouletteStepLabel" class="text-slate-300 font-semibold uppercase tracking-wider text-[10px]">Генерация модели...</span>
+          <span id="rouletteValueLabel" class="font-mono font-bold text-amber-300 truncate ml-2">...</span>
+        </div>
+      </div>
+
+      <!-- Детали, управление владельца, апгрейд и передача -->
+      <div class="p-5 bg-[#0b1322]/95 border-t border-white/10 space-y-3.5 overflow-y-auto">
+        <div class="text-center">
+          <div class="flex items-center justify-center gap-2">
+            <h3 id="giftInspectTitle" class="text-lg font-extrabold text-white"></h3>
+            <span id="giftInspectSerial" class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-purple-500/20 text-amber-300 border border-amber-400/30 hidden"></span>
+          </div>
+          <p id="giftInspectSubtitle" class="text-xs text-slate-400 mt-1"></p>
+        </div>
+
+        <!-- Кнопка УЛУЧШИТЬ В NFT (показывается для обычных подарков владельца) -->
+        <div id="upgradeActionBox" class="hidden p-3.5 rounded-2xl bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-amber-500/20 border border-purple-500/40 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold text-purple-200">Улучшение в коллекционный NFT</span>
+            <span id="upgradeCostBadge" class="font-mono font-bold text-amber-300">250 ORB</span>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            Рулетка случайным образом выберет одну из <b>6 уникальных 3D-моделей</b>, один из <b>18 редких фонов</b> (включая <i>Black</i> и <i>Onyx Black</i>) и орбитальный глиф.
+          </p>
+          <button type="button" id="startUpgradeBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-bold text-xs tracking-wide shadow-lg transition flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span id="startUpgradeBtnText">Улучшить до уникального NFT</span>
+          </button>
+        </div>
+
+        <!-- ПАНЕЛЬ ВЛАДЕЛЬЦА: СКРЫТЬ ПОДАРОК ИЛИ ПЕРЕДАТЬ ДРУГОМУ ПОЛЬЗОВАТЕЛЮ -->
+        <div id="ownerGiftControls" class="hidden space-y-2.5">
+          <div class="grid grid-cols-2 gap-2.5">
+            <button type="button" id="toggleHideGiftBtn" class="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              <span id="toggleHideGiftText">Скрыть в профиле</span>
+            </button>
+
+            <button type="button" id="openTransferGiftBtn" class="py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-xs font-semibold text-sky-300 transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
+              <span>Передать подарок</span>
+            </button>
+          </div>
+
+          <!-- Выпадающий блок выбора получателя для передачи подарка -->
+          <div id="transferSelectorBox" class="hidden p-3 rounded-2xl bg-[#070d19] border border-sky-500/30 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">Выберите получателя передачи</span>
+              <button type="button" id="cancelTransferBoxBtn" class="text-[11px] text-slate-400 hover:text-white">Отмена</button>
+            </div>
+            <input type="text" id="transferSearchInput" placeholder="Поиск по имени, @уз или ID..." class="orbit-input w-full px-3 py-1.5 rounded-xl text-xs" />
+            <div id="transferUsersList" class="max-h-36 overflow-y-auto space-y-1 pr-1"></div>
+          </div>
+        </div>
+
+        <!-- Таблица атрибутов -->
+        <div id="giftInspectAttributes" class="rounded-2xl bg-[#070d19] border border-white/5 divide-y divide-white/5 text-xs overflow-hidden"></div>
+
+        <button type="button" id="closeInspectBottomBtn" onclick="window.closeGiftInspect()" class="btn-primary w-full py-2.5 rounded-xl text-xs font-semibold tracking-wide">
+          Закрыть осмотр
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       МОДАЛЬНОЕ ОКНО КАТАЛОГА И КОНСТРУКТОРА ВЫДАЧИ ПОДАРКОВ / ВАЛЮТЫ
+       ========================================================================= -->
+  <div id="adminActionModal" class="modal-backdrop fixed inset-0 z-[105] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 md:p-6">
+    <div class="modal-card orbit-dock w-full max-w-5xl max-h-[92vh] rounded-3xl flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Шапка окна выдачи -->
+      <div class="p-4 md:px-6 flex items-center justify-between border-b border-white/10 bg-[#0d1729]">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          </div>
+          <div>
+            <h3 id="adminActionTitle" class="text-base font-bold text-white">Студия Артефактов и Подарков Orbit</h3>
+            <p id="adminActionSubtitle" class="text-[11px] text-sky-400">Выберите фон, 3D-модель и глиф — предпросмотр карточек обновляется мгновенно</p>
+          </div>
+        </div>
+        <button type="button" onclick="document.getElementById('adminActionModal').classList.remove('open')" class="w-8 h-8 rounded-full bg-white/5 text-slate-400 hover:text-white flex items-center justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+        
+        <!-- Блок начисления валюты ORB (Виден только Создателю @white) -->
+        <div id="adminBalanceBox" class="bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-purple-500/10 p-4 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div>
+            <div class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Эмиссия валюты ORB (Доступ Создателя Orbit)</div>
+            <div class="text-[11px] text-slate-300 mt-0.5">Мгновенно начислить или списать ORB со счета выбранного узла</div>
+          </div>
+          <div class="flex gap-2 w-full sm:w-auto">
+            <input type="number" id="adminAddBalanceInput" placeholder="Сумма ORB (напр. 10000)" class="orbit-input px-3.5 py-2 rounded-xl text-xs w-full sm:w-48" />
+            <button type="button" onclick="window.adminProcessBalance()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex-shrink-0">
+              Зачислить
+            </button>
+          </div>
+        </div>
+
+        <!-- Конструктор параметров выдачи NFT (Скин + Фон + Глиф + Комментарий) -->
+        <div class="p-3.5 rounded-2xl bg-[#070d19]/90 border border-white/10 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex gap-1.5 p-1 rounded-xl bg-black/40 border border-white/5">
+              <button type="button" data-gfilter="all" class="gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#2b5278] text-white transition">Все (24)</button>
+              <button type="button" data-gfilter="normal" class="gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-sky-300 hover:text-white transition">Обычные под апгрейд (12)</button>
+              <button type="button" data-gfilter="nft" class="gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-purple-300 hover:text-white transition">Коллекционные NFT (12)</button>
+            </div>
+            <span class="text-[11px] text-amber-300 font-medium">Настройте точный вид NFT перед выдачей:</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-bold ml-1">1. 3D-Модель (Скин NFT)</label>
+              <select id="nftVariantSelect" class="orbit-input w-full px-3 py-2 rounded-xl text-xs text-sky-200 mt-1">
+                <option value="random">Случайная модель (Рандом)</option>
+                <option value="0">Модель #1 (Original / 35%)</option>
+                <option value="1">Модель #2 (Golden / 20%)</option>
+                <option value="2">Модель #3 (Cyber Neon / 17%)</option>
+                <option value="3">Модель #4 (Crimson / 14%)</option>
+                <option value="4">Модель #5 (Onyx Monochrome / 9%)</option>
+                <option value="5">Модель #6 (Celestial / 5%)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-bold ml-1">2. Фоновая матрица (18 фонов)</label>
+              <select id="nftBgSelect" class="orbit-input w-full px-3 py-2 rounded-xl text-xs text-purple-200 mt-1">
+                <option value="random">Случайный фон из 18</option>
+                <option value="Onyx Black">Onyx Black (Singular 0.05%)</option>
+                <option value="Black">Black (Immortal 0.1%)</option>
+                <option value="Hyperion Gold">Hyperion Gold (Immortal 0.2%)</option>
+                <option value="Midnight Onyx">Midnight Onyx (Immortal 0.3%)</option>
+                <option value="Astral Mirage">Astral Mirage (Cosmic 0.5%)</option>
+                <option value="Abyssal Void">Abyssal Void (Cosmic 0.6%)</option>
+                <option value="Starlight Champagne">Starlight Champagne (Legendary 0.7%)</option>
+                <option value="Golden Nebula">Golden Nebula (Legendary 0.8%)</option>
+                <option value="Solar Flare">Solar Flare (Legendary 0.9%)</option>
+                <option value="Blood Moon">Blood Moon (Mythic 1.0%)</option>
+                <option value="Quantum Plasma">Quantum Plasma (Mythic 1.1%)</option>
+                <option value="Cyber Violet">Cyber Violet (Mythic 1.2%)</option>
+                <option value="Toxic Singularity">Toxic Singularity (Epic 1.9%)</option>
+                <option value="Arctic Aurora">Arctic Aurora (Epic 2.1%)</option>
+                <option value="Crimson Pulse">Crimson Pulse (Epic 2.5%)</option>
+                <option value="Sakura Neon">Sakura Neon (Rare 3.5%)</option>
+                <option value="Royal Sapphire">Royal Sapphire (Rare 3.8%)</option>
+                <option value="Emerald Matrix">Emerald Matrix (Rare 4.0%)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-bold ml-1">3. Орбитальный глиф</label>
+              <select id="nftPatternSelect" class="orbit-input w-full px-3 py-2 rounded-xl text-xs text-pink-200 mt-1">
+                <option value="random">Случайный глиф</option>
+                <option value="Singularity Grid">Singularity Grid (0.4%)</option>
+                <option value="Astral Runes">Astral Runes (0.8%)</option>
+                <option value="Imperial Filigree">Imperial Filigree (0.9%)</option>
+                <option value="Sacred Geometry">Sacred Geometry (1.2%)</option>
+                <option value="Supernova Rings">Supernova Rings (1.5%)</option>
+                <option value="Void Constellation">Void Constellation (1.8%)</option>
+                <option value="Quantum Matrix">Quantum Matrix (2.4%)</option>
+                <option value="Cyber Circuit">Cyber Circuit (3.1%)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-bold ml-1">4. Подпись к подарку</label>
+              <input type="text" id="giftCommentInput" maxlength="60" placeholder="От Создателя Orbit..." class="orbit-input w-full px-3 py-2 rounded-xl text-xs mt-1" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Сетка карточек подарков -->
+        <div id="giftCatalogGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5"></div>
+
+        <!-- Свой кастомный подарок по ссылке -->
+        <details class="bg-black/25 rounded-2xl border border-white/5 p-3.5">
+          <summary class="text-xs font-semibold text-slate-300 cursor-pointer select-none">Выпустить кастомный артефакт по прямому URL изображения</summary>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 mt-3">
+            <select id="customGiftType" class="orbit-input px-3 py-2 rounded-xl text-xs">
+              <option value="nft">Коллекционный NFT</option>
+              <option value="normal">Обычный (с возможностью апгрейда)</option>
+            </select>
+            <input type="text" id="customGiftName" placeholder="Название артефакта" class="orbit-input px-3 py-2 rounded-xl text-xs" />
+            <input type="url" id="customGiftUrl" placeholder="https://... (PNG/WebP/GIF)" class="orbit-input px-3 py-2 rounded-xl text-xs" />
+            <button type="button" onclick="window.sendCustomGift()" class="btn-primary py-2 px-4 rounded-xl text-xs font-semibold">Выпустить</button>
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Окно Создания Чата / Канала -->
+  <div id="createRoomModal" class="modal-backdrop fixed inset-0 z-[85] bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-card orbit-dock w-full max-w-md rounded-3xl p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-semibold text-white">Создать пространство</h3>
+        <button type="button" id="closeCreateRoomBtn" class="w-8 h-8 rounded-full bg-white/5 text-slate-400 hover:text-white flex items-center justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/40 border border-white/5 mb-4">
+        <button type="button" id="typeGroupBtn" class="py-2 text-xs font-medium rounded-lg bg-[#2b5278] text-white transition">Групповой чат</button>
+        <button type="button" id="typeChannelBtn" class="py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition">Канал</button>
+      </div>
+      <p id="roomTypeHint" class="text-[11px] text-slate-400 mb-4">В группе общаться могут все участники сети.</p>
+      <form id="createRoomForm" class="space-y-3.5">
+        <div><input type="text" id="roomTitleInput" required maxlength="40" placeholder="Название *" class="orbit-input w-full px-3.5 py-2.5 rounded-xl text-sm" /></div>
+        <div class="relative">
+          <span class="absolute left-3.5 top-2.5 text-sky-400 text-sm font-mono">@</span>
+          <input type="text" id="roomHandleInput" required maxlength="16" placeholder="tag" class="orbit-input w-full pl-8 pr-3.5 py-2.5 rounded-xl text-sm font-mono" />
+        </div>
+        <div><textarea id="roomBioInput" rows="2" maxlength="120" placeholder="Описание" class="orbit-input w-full px-3.5 py-2 rounded-xl text-sm resize-none"></textarea></div>
+        <button type="submit" id="submitCreateRoomBtn" class="btn-primary w-full py-2.5 rounded-xl text-sm font-semibold">Создать</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно профиля партнера -->
+  <div id="partnerProfileModal" class="modal-backdrop fixed inset-0 z-[80] bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-card orbit-dock w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl">
+      <div class="h-24 bg-gradient-to-r from-sky-500/30 via-indigo-500/30 to-purple-500/30 relative flex-shrink-0">
+        <button id="closePartnerModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 text-white/80 hover:text-white flex items-center justify-center transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="px-6 pb-6 -mt-12 flex flex-col items-center text-center overflow-y-auto">
+        <img id="modalPartnerAvatar" src="" class="w-24 h-24 rounded-full object-cover border-4 border-[#0b1322] shadow-lg bg-slate-800 flex-shrink-0" />
+        <div class="flex items-center justify-center gap-2 mt-2.5 flex-wrap">
+          <h3 id="modalPartnerFullName" class="text-lg font-bold text-white"></h3>
+          <span id="modalPartnerCreatorBadge" class="creator-pill hidden">Создатель Orbit</span>
+        </div>
+        <p id="modalPartnerUsername" class="text-xs text-sky-400 font-mono mt-0.5"></p>
+
+        <button id="sendGiftToPartnerBtn" type="button" class="mt-3 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white text-xs font-bold shadow-lg flex items-center gap-2 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          Отправить подарок / NFT
+        </button>
+
+        <div class="w-full mt-4 p-3.5 rounded-2xl bg-[#070d19]/90 border border-white/5 text-left space-y-2.5">
+          <div>
+            <div class="text-[11px] text-slate-400 uppercase tracking-wider">Описание</div>
+            <p id="modalPartnerBio" class="text-xs text-slate-200 mt-0.5 leading-relaxed"></p>
+          </div>
+          <div class="border-t border-white/5 pt-2 flex justify-between items-center">
+            <div>
+              <div id="modalExtraLabel" class="text-[11px] text-slate-400 uppercase tracking-wider">Почта узла</div>
+              <p id="modalPartnerEmail" class="text-xs text-slate-300 mt-0.5 truncate"></p>
+            </div>
+            <div class="text-right">
+              <div class="text-[11px] text-slate-400 uppercase tracking-wider">Баланс</div>
+              <p id="modalPartnerBalance" class="text-xs text-emerald-400 font-bold mt-0.5">0 ORB</p>
+            </div>
+          </div>
+          <div class="border-t border-white/5 pt-2 flex justify-between">
+            <div>
+              <div class="text-[11px] text-slate-400 uppercase tracking-wider">Порядковый ID</div>
+              <p id="modalPartnerUid" class="text-xs text-sky-400 font-mono font-bold mt-0.5"></p>
+            </div>
+            <div class="text-right">
+              <div class="text-[11px] text-slate-400 uppercase tracking-wider">Дата регистрации</div>
+              <p id="modalPartnerRegDate" class="text-xs text-slate-300 mt-0.5"></p>
+            </div>
+          </div>
+
+          <!-- Витрина подарков и NFT пользователя -->
+          <div id="modalPartnerGiftsSection" class="border-t border-white/5 pt-3 hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Публичная коллекция</span>
+              <span id="modalPartnerGiftsCount" class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">0</span>
+            </div>
+            <div id="modalPartnerGiftsContainer" class="grid grid-cols-3 gap-2.5 pt-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       ЭКРАН АВТОРИЗАЦИИ
+       ========================================================================= -->
+  <main id="authContainer">
+    <div class="orbit-dock w-full max-w-md rounded-3xl p-7 md:p-8 relative">
+      <div class="flex flex-col items-center mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-400/25 flex items-center justify-center mb-3 shadow-inner">
+          <svg class="w-8 h-8 text-sky-400 animate-spin" style="animation-duration: 14s;" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor" /><ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" stroke-width="1.5" transform="rotate(-25 12 12)" /><ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.45" transform="rotate(35 12 12)" /></svg>
+        </div>
+        <h2 class="text-xl font-bold text-white">Вход в Orbit OS</h2>
+        <p class="text-xs text-slate-400 mt-1">Подключите свой узел к орбитальной сети</p>
+      </div>
+
+      <div class="grid grid-cols-2 p-1 rounded-xl bg-black/35 mb-5 border border-white/5">
+        <button id="tabRegister" type="button" class="py-2 text-xs font-semibold rounded-lg bg-[#2b5278] text-white shadow transition">Регистрация</button>
+        <button id="tabLogin" type="button" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Вход</button>
+      </div>
+
+      <form id="authForm" class="space-y-3.5">
+        <div id="registerExtraFields" class="space-y-3.5">
+          <div class="grid grid-cols-2 gap-2.5">
+            <input type="text" id="regFirstName" placeholder="Имя" class="orbit-input w-full px-3.5 py-2.5 rounded-xl text-sm" />
+            <input type="text" id="regLastName" placeholder="Фамилия" class="orbit-input w-full px-3.5 py-2.5 rounded-xl text-sm" />
+          </div>
+          <div>
+            <div class="relative">
+              <span class="absolute left-3.5 top-2.5 text-slate-400 text-sm">@</span>
+              <input type="text" id="regUsername" maxlength="16" placeholder="username" class="orbit-input w-full pl-8 pr-4 py-2.5 rounded-xl text-sm font-mono" />
+            </div>
+            <p id="regUsernameHint" class="text-[11px] text-slate-400 mt-1 ml-1">4–16 символов (a-z, 1-9, _)</p>
+          </div>
+        </div>
+        <input type="email" id="emailInput" required placeholder="Электронная почта" class="orbit-input w-full px-4 py-2.5 rounded-xl text-sm" />
+        <input type="password" id="passwordInput" required minlength="6" placeholder="Пароль" class="orbit-input w-full px-4 py-2.5 rounded-xl text-sm" />
+        <button type="submit" id="submitBtn" class="btn-primary w-full py-3 rounded-xl text-sm font-semibold mt-1">Создать аккаунт</button>
+      </form>
+
+      <div class="flex items-center my-4">
+        <div class="flex-1 h-px bg-white/10"></div><span class="px-3 text-[11px] uppercase text-slate-500">или</span><div class="flex-1 h-px bg-white/10"></div>
+      </div>
+
+      <button type="button" id="googleBtn" class="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex justify-center items-center gap-2.5 text-sm transition">
+        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.8C6.2 7.2 8.9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.6l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/><path fill="#FBBC05" d="M5.3 14.8c-.2-.8-.4-1.6-.4-2.5s.2-1.7.4-2.5L1.6 7C.6 9 0 11.2 0 13.5s.6 4.5 1.6 6.5l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5l-3.7 2.8C3.5 19.9 7.4 23 12 23z"/></svg>
+        Продолжить через Google
+      </button>
+      <p id="statusMsg" class="text-center text-xs text-sky-400 mt-3 min-h-[1rem]"></p>
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       ЭКРАН МЕССЕНДЖЕРА (УНИКАЛЬНЫЙ КОСМИЧЕСКИЙ ИНТЕРФЕЙС ПАРЯЩИХ ДОКОВ)
+       ========================================================================= -->
+  <main id="messengerContainer">
+
+    <!-- АДМИН-ПАНЕЛЬ (ДЛЯ СОЗДАТЕЛЯ @white) -->
+    <div id="adminPanel" class="orbit-dock absolute inset-3.5 rounded-3xl flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 flex items-center justify-between border-b border-rose-500/30 bg-[#0d1729]/90">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-bold text-white">Центр Создателя Orbit</h2>
+              <span class="creator-pill">Создатель Orbit</span>
+            </div>
+            <p class="text-xs text-slate-400">Управление узлами, баланс ORB, ручная сборка и выдача NFT</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="giftMyselfBtn" class="px-3.5 py-2 rounded-xl bg-purple-500/20 border border-purple-400/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Выдать себе
+          </button>
+          <button id="closeAdminBtn" class="text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-white/5 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 p-2 mx-5 mt-4 rounded-xl bg-black/40 border border-rose-500/20">
+        <button id="tabAdminUsers" type="button" class="py-2 text-xs font-semibold rounded-lg bg-rose-500/20 text-rose-400 transition">Все пользователи сети</button>
+        <button id="tabAdminRooms" type="button" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-rose-400 transition">Каналы и Группы</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-5 max-w-5xl w-full mx-auto">
+        <div id="adminUsersList" class="space-y-2.5"></div>
+        <div id="adminRoomsList" class="space-y-2.5 hidden"></div>
+      </div>
+    </div>
+
+    <!-- ВЫЕЗЖАЮЩАЯ ПАНЕЛЬ НАСТРОЕК -->
+    <div id="settingsPanel" class="orbit-dock absolute left-3.5 top-3.5 bottom-3.5 w-80 md:w-96 rounded-3xl flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 flex items-center justify-between border-b border-white/10 bg-[#0d1729]/90">
+        <div class="flex items-center gap-3">
+          <button id="closeSettingsBtn" class="text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-white/5 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          </button>
+          <h2 class="text-base font-bold text-white">Настройки узла</h2>
+        </div>
+        <button id="logoutBtn" type="button" class="text-xs text-rose-400 hover:bg-rose-500/10 px-3 py-1.5 rounded-xl border border-rose-500/25 transition">Выйти</button>
+      </div>
+
+      <div class="grid grid-cols-2 p-1.5 mx-4 mt-3 rounded-xl bg-black/40 border border-white/5">
+        <button id="tabSetProfile" type="button" class="py-1.5 text-xs font-semibold rounded-lg bg-[#2b5278] text-white transition">Мой профиль</button>
+        <button id="tabSetApp" type="button" class="py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Интерфейс</button>
+      </div>
+
+      <!-- ВКЛАДКА ПРОФИЛЬ -->
+      <div id="profileSettingsTab" class="flex-1 overflow-y-auto p-5 space-y-4">
+
+        <!-- Карточка Баланса с 3D-эмблемой ORB -->
+        <div class="bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 border border-sky-400/30 rounded-2xl p-4 flex items-center justify-between shadow-inner">
+          <div>
+            <div class="text-[10px] text-sky-200 uppercase font-bold tracking-wider">Ваш баланс</div>
+            <div class="text-2xl font-black text-white flex items-center gap-1.5 mt-0.5">
+              <span id="settingsBalance">0</span> <span class="text-sky-400 text-sm font-bold">ORB</span>
+            </div>
+          </div>
+          <div class="w-12 h-12 artifact-3d-wrapper">
+            <svg viewBox="0 0 100 100" class="w-full h-full">
+              <defs>
+                <radialGradient id="orbCoinGrad" cx="35%" cy="30%" r="65%">
+                  <stop offset="0%" stop-color="#e0f2fe"/>
+                  <stop offset="40%" stop-color="#38bdf8"/>
+                  <stop offset="80%" stop-color="#4f46e5"/>
+                  <stop offset="100%" stop-color="#1e1b4b"/>
+                </radialGradient>
+              </defs>
+              <circle cx="50" cy="50" r="38" fill="url(#orbCoinGrad)" stroke="#bae6fd" stroke-width="2"/>
+              <ellipse cx="50" cy="50" rx="46" ry="16" fill="none" stroke="#38bdf8" stroke-width="2.5" transform="rotate(-25 50 50)"/>
+              <circle cx="38" cy="36" r="6" fill="#ffffff" opacity="0.65"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center">
+          <div class="relative group cursor-pointer" onclick="document.getElementById('avatarFileInput').click()">
+            <img id="settingsAvatarPreview" src="" class="w-24 h-24 rounded-full object-cover border-2 border-sky-400 shadow-lg bg-slate-800 transition group-hover:brightness-75" />
+            <div class="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <input type="file" id="avatarFileInput" accept="image/*" class="hidden" />
+          </div>
+          <span class="text-[11px] text-sky-400 mt-1.5 cursor-pointer hover:underline" onclick="document.getElementById('avatarFileInput').click()">Загрузить фото с ПК</span>
+        </div>
+
+        <form id="settingsForm" class="space-y-3.5">
+          <div class="grid grid-cols-2 gap-2.5">
+            <div><label class="text-[11px] text-slate-400 ml-1">Имя *</label><input type="text" id="settingsFirstName" required placeholder="Имя" class="orbit-input w-full px-3.5 py-2 rounded-xl text-sm mt-1" /></div>
+            <div><label class="text-[11px] text-slate-400 ml-1">Фамилия</label><input type="text" id="settingsLastName" placeholder="Фамилия" class="orbit-input w-full px-3.5 py-2 rounded-xl text-sm mt-1" /></div>
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 ml-1">Юзернейм (@уз)</label>
+            <div class="relative mt-1"><span class="absolute left-3.5 top-2 text-sky-400 text-sm font-medium">@</span><input type="text" id="settingsUsername" required maxlength="16" class="orbit-input w-full pl-8 pr-3.5 py-2 rounded-xl text-sm font-mono" /></div>
+            <p id="usernameValidationMsg" class="text-[11px] text-slate-400 mt-1 ml-1">4–16 символов: a-z, 1-9 и _</p>
+          </div>
+          <div>
+            <div class="flex justify-between items-center ml-1"><label class="text-[11px] text-slate-400">О себе</label><span id="bioCounter" class="text-[10px] text-slate-500">0 / 120</span></div>
+            <textarea id="settingsBio" rows="2" maxlength="120" class="orbit-input w-full px-3.5 py-2 rounded-xl text-sm mt-1 resize-none"></textarea>
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 ml-1">Или ссылка на аватар (URL)</label>
+            <input type="url" id="settingsAvatarUrl" placeholder="https://..." class="orbit-input w-full px-3.5 py-2 rounded-xl text-xs mt-1" />
+          </div>
+
+          <div class="p-3 rounded-xl bg-black/30 border border-white/5 flex justify-between items-center">
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase">Порядковый ID</div>
+              <div id="settingsUid" class="text-xs font-mono font-bold text-sky-400 mt-0.5">000001</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-slate-400 uppercase">Дата регистрации</div>
+              <div id="settingsRegDate" class="text-xs font-mono text-slate-200 mt-0.5">...</div>
+            </div>
+          </div>
+
+          <button type="submit" id="saveProfileBtn" class="btn-primary w-full py-2.5 rounded-xl text-sm font-semibold shadow-lg">Сохранить профиль</button>
+        </form>
+
+        <!-- Мои Подарки и NFT -->
+        <div id="myGiftsSection" class="border-t border-white/10 pt-3 hidden">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Мои подарки и NFT</span>
+            <span id="myGiftsCount" class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">0</span>
+          </div>
+          <p class="text-[10px] text-sky-400/80 mb-2.5">Нажмите на подарок, чтобы улучшить в NFT, скрыть или передать</p>
+          <div id="myGiftsContainer" class="grid grid-cols-2 gap-2.5"></div>
+        </div>
+
+        <!-- КНОПКА АДМИНА (@white) -->
+        <button id="adminPanelBtn" type="button" class="hidden w-full py-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-purple-500/20 text-amber-300 hover:from-amber-500 hover:to-purple-600 hover:text-white text-xs font-bold transition mt-4 border border-amber-400/40 shadow-lg flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+          Открыть Центр Создателя (@white)
+        </button>
+      </div>
+
+      <!-- ВКЛАДКА МЕССЕНДЖЕР -->
+      <div id="appSettingsTab" class="hidden flex-1 overflow-y-auto p-5 space-y-5">
+        <div>
+          <label class="text-xs font-medium text-slate-300 block mb-2.5">Акцентная тема Orbit OS</label>
+          <div class="grid grid-cols-4 gap-2.5">
+            <button type="button" data-theme="orbit" onclick="setAccentTheme('orbit', '#38bdf8', '#1e3a5f')" class="theme-btn active-theme h-10 rounded-xl bg-[#1e3a5f] flex items-center justify-center text-xs font-semibold text-white">Orbit</button>
+            <button type="button" data-theme="neon" onclick="setAccentTheme('neon', '#a855f7', '#4c1d95')" class="theme-btn h-10 rounded-xl bg-[#4c1d95] flex items-center justify-center text-xs font-semibold text-white">Neon</button>
+            <button type="button" data-theme="matrix" onclick="setAccentTheme('matrix', '#10b981', '#065f46')" class="theme-btn h-10 rounded-xl bg-[#065f46] flex items-center justify-center text-xs font-semibold text-white">Matrix</button>
+            <button type="button" data-theme="ruby" onclick="setAccentTheme('ruby', '#f43f5e', '#881337')" class="theme-btn h-10 rounded-xl bg-[#881337] flex items-center justify-center text-xs font-semibold text-white">Ruby</button>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-xs text-slate-300 mb-1.5"><span>Размер текста</span><span id="fontSizeLabel" class="text-sky-400 font-mono">15px</span></div>
+          <input type="range" id="fontSizeRange" min="12" max="18" value="15" class="w-full accent-sky-400" />
+        </div>
+        <div>
+          <div class="flex justify-between text-xs text-slate-300 mb-1.5"><span>Скругление капсул</span><span id="radiusLabel" class="text-sky-400 font-mono">18px</span></div>
+          <input type="range" id="radiusRange" min="6" max="24" value="18" class="w-full accent-sky-400" />
+        </div>
+        <div class="space-y-3 pt-2 border-t border-white/10">
+          <label class="flex items-center justify-between cursor-pointer"><span class="text-xs text-slate-200">Звук входящих/исходящих</span><input type="checkbox" id="toggleSound" checked class="w-4 h-4 accent-sky-400" /></label>
+          <label class="flex items-center justify-between cursor-pointer"><span class="text-xs text-slate-200">Фоновая 3D-орбита</span><input type="checkbox" id="toggleOrbits" checked class="w-4 h-4 accent-sky-400" /></label>
+          <label class="flex items-center justify-between cursor-pointer"><span class="text-xs text-slate-200">Отправка по Enter</span><input type="checkbox" id="toggleEnterSend" checked class="w-4 h-4 accent-sky-400" /></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ЛЕВЫЙ ПАРЯЩИЙ ДОК: СПИСОК УЗЛОВ И ПРОСТРАНСТВ -->
+    <aside class="orbit-dock w-80 md:w-96 flex-shrink-0 flex flex-col h-full rounded-3xl relative z-10 overflow-hidden">
+      <div class="p-3.5 flex items-center gap-2 border-b border-white/5 bg-white/[0.01]">
+        <button id="openSettingsBtn" class="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-white/5 transition" title="Настройки">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="relative flex-1">
+          <input type="text" id="searchInput" placeholder="Поиск узлов и @тегов..." class="orbit-input w-full pl-8 pr-3 py-2 rounded-xl text-xs" />
+          <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+        <button id="openCreateRoomBtn" class="w-9 h-9 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-400 flex items-center justify-center transition flex-shrink-0" title="Создать канал или группу">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+      </div>
+
+      <!-- Карточка текущего пользователя -->
+      <div id="myMiniBar" class="mx-3 my-2.5 px-3 py-2.5 rounded-2xl bg-gradient-to-r from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-400/20 flex items-center gap-2.5 cursor-pointer hover:bg-white/[0.06] transition" onclick="document.getElementById('openSettingsBtn').click()">
+        <img id="myMiniAvatar" src="" class="w-9 h-9 rounded-full object-cover border border-sky-400/60" />
+        <div class="overflow-hidden flex-1">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span id="myMiniName" class="text-xs font-bold text-white truncate"></span>
+            <span id="myMiniCreatorBadge" class="creator-pill hidden">Создатель Orbit</span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span id="myMiniUsername" class="text-[11px] text-sky-400 truncate font-mono"></span>
+            <span id="myMiniIdBadge" class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/10 text-slate-300">ID 000001</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Вкладки фильтрации -->
+      <div class="flex gap-1 px-3 pb-2.5 border-b border-white/5 text-[11px] font-semibold">
+        <button type="button" data-filter="all" class="filter-tab flex-1 py-1.5 rounded-xl bg-white/10 text-white transition">Все</button>
+        <button type="button" data-filter="dm" class="filter-tab flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition">Личные</button>
+        <button type="button" data-filter="group" class="filter-tab flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition">Группы</button>
+        <button type="button" data-filter="channel" class="filter-tab flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition">Каналы</button>
+      </div>
+      <div id="chatsList" class="flex-1 overflow-y-auto py-1.5"></div>
+    </aside>
+
+    <!-- ПРАВЫЙ ПАРЯЩИЙ ДОК: ОКНО СВЯЗИ -->
+    <section class="orbit-dock flex-1 flex flex-col h-full rounded-3xl relative z-10 overflow-hidden">
+      <div id="chatPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none">
+        <div class="w-16 h-16 rounded-3xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center mb-3">
+          <svg class="w-8 h-8 text-sky-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        </div>
+        <div class="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300 text-xs">Выберите узел или канал для начала передачи</div>
+      </div>
+
+      <video id="liveVideoPreview" class="hidden" autoplay muted playsinline></video>
+
+      <div id="activeChat" class="hidden flex-col h-full">
+        <!-- Шапка активного чата -->
+        <div id="chatHeaderBar" class="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition border-b border-white/10 bg-[#0d1729]/60 z-10">
+          <div class="flex items-center gap-3.5 overflow-hidden">
+            <div class="relative flex-shrink-0">
+              <img id="chatPartnerAvatar" src="" class="w-10 h-10 rounded-full object-cover bg-slate-800 border border-white/10" />
+              <span id="chatOnlineDot" class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0d1729]"></span>
+            </div>
+            <div class="flex flex-col overflow-hidden">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span id="chatPartnerTypeBadge" class="hidden text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-semibold uppercase"></span>
+                <span id="chatPartnerName" class="text-sm font-bold text-white truncate"></span>
+                <span id="chatPartnerCreatorBadge" class="creator-pill hidden">Создатель Orbit</span>
+                <span id="chatPartnerUsernameBadge" class="text-[11px] text-sky-400 font-mono"></span>
+              </div>
+              <span id="chatPartnerBioPreview" class="text-[11px] text-slate-400 truncate"></span>
+            </div>
+          </div>
+
+          <button id="headerQuickGiftBtn" type="button" onclick="event.stopPropagation(); window.openGiftShopForActivePartner();" class="px-3.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-semibold transition flex items-center gap-1.5 flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            Подарить
+          </button>
+        </div>
+
+        <div id="messagesArea" class="flex-1 overflow-y-auto p-5 flex flex-col relative z-0"></div>
+
+        <div id="attachmentPreviewBar" class="hidden px-4 py-2.5 bg-[#0d1729] border-t border-white/10 items-center justify-between gap-3 z-10">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div id="attachThumbBox" class="w-10 h-10 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center flex-shrink-0 overflow-hidden"></div>
+            <div class="overflow-hidden"><div id="attachFileName" class="text-xs font-medium text-white truncate"></div><div id="attachFileSize" class="text-[10px] text-sky-400">Готово к отправке</div></div>
+          </div>
+          <button type="button" id="cancelAttachmentBtn" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div id="recordingBar" class="hidden bg-[#0d1729] border-t border-white/10 px-4 py-3 flex items-center justify-between z-10">
+          <div class="flex items-center gap-3 text-rose-400">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <span id="recordingTimer" class="text-sm font-mono font-medium tracking-wider text-white">00:00</span>
+            <span id="recordingTypeLabel" class="text-xs opacity-70">Запись...</span>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" id="cancelRecBtn" class="p-2 text-slate-400 hover:text-white bg-white/5 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            <button type="button" id="sendRecBtn" class="p-2 text-sky-400 hover:text-white bg-sky-500/20 rounded-full"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+          </div>
+        </div>
+
+        <div id="channelReadonlyBar" class="hidden bg-[#0d1729]/90 border-t border-white/10 py-3.5 px-4 text-center text-xs text-slate-400 select-none z-10">Информационный канал. Публиковать записи может только создатель.</div>
+
+        <form id="messageForm" class="bg-[#0d1729]/80 border-t border-white/10 px-3.5 py-2.5 flex items-end gap-2.5 z-10">
+          <input type="file" id="chatFileInput" class="hidden" />
+          <button type="button" id="attachBtn" class="p-2.5 text-slate-400 hover:text-sky-400 hover:bg-white/5 rounded-xl transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg></button>
+
+          <textarea id="msgInput" rows="1" placeholder="Передать сообщение в сеть..." class="orbit-input flex-1 px-4 py-3 rounded-2xl text-sm placeholder-slate-400 resize-none overflow-hidden" style="min-height: 44px; max-height: 120px;"></textarea>
+
+          <div class="flex items-center gap-1">
+            <button type="submit" id="sendMsgBtn" class="hidden p-2.5 rounded-xl btn-primary flex items-center justify-center"><svg class="w-5 h-5 translate-x-[1px]" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+            <button type="button" id="recAudioBtn" class="p-2.5 text-slate-400 hover:text-emerald-400 hover:bg-white/5 rounded-xl transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg></button>
+            <button type="button" id="recVideoBtn" class="p-2.5 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-xl transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- Скрипты анимации орбит и звуковых эффектов -->
+  <script>
+    const canvas = document.getElementById('orbitCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, centerX, centerY, mouseX = 0, mouseY = 0;
+    window.orbitsEnabled = true;
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+      centerX = width / 2;
+      centerY = height / 2;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    window.addEventListener('mousemove', e => {
+      mouseX = (e.clientX - centerX) * 0.025;
+      mouseY = (e.clientY - centerY) * 0.025;
+    });
+
+    const orbits = [
+      {rx:120, ry:50, tilt:-0.35, speed:0.015, angle:0.4, color:'#38bdf8'},
+      {rx:195, ry:80, tilt:0.45, speed:-0.010, angle:2.1, color:'#818cf8'},
+      {rx:270, ry:105, tilt:-0.20, speed:0.007, angle:4.2, color:'#c084fc'}
+    ];
+    const stars = Array.from({length:95}, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 1.4,
+      alpha: Math.random() * 0.55 + 0.15
+    }));
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      if (window.orbitsEnabled) {
+        stars.forEach(s => {
+          ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+        });
+        const cx = centerX + mouseX, cy = centerY + mouseY;
+        const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 85);
+        grad.addColorStop(0, 'rgba(56,189,248,0.45)');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, 85, 0, Math.PI * 2); ctx.fill();
+        orbits.forEach(o => {
+          o.angle += o.speed;
+          ctx.save(); ctx.translate(cx, cy); ctx.rotate(o.tilt);
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.ellipse(0, 0, o.rx, o.ry, 0, 0, Math.PI * 2); ctx.stroke();
+          const sx = Math.cos(o.angle) * o.rx, sy = Math.sin(o.angle) * o.ry;
+          ctx.shadowBlur = 12; ctx.shadowColor = o.color; ctx.fillStyle = o.color;
+          ctx.beginPath(); ctx.arc(sx, sy, 3.8, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        });
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    // 3D наклон карточки подарка при осмотре
+    const stageEl = document.getElementById('giftInspectStage');
+    const card3DEl = document.getElementById('giftInspectCard3D');
+    stageEl.addEventListener('mousemove', (e) => {
+      if (window.isUpgradingNow) return;
+      const rect = stageEl.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width - 0.5) * 28;
+      const y = ((e.clientY - rect.top) / rect.height - 0.5) * -28;
+      card3DEl.style.transform = `rotateY(${x}deg) rotateX(${y}deg) scale(1.06)`;
+    });
+    stageEl.addEventListener('mouseleave', () => {
+      if (window.isUpgradingNow) return;
+      card3DEl.style.transform = `rotateY(0deg) rotateX(0deg) scale(1)`;
+    });
+
+    let sharedAudioCtx = null;
+    window.playPopSound = function(type = 'send') {
+      if (!document.getElementById('toggleSound')?.checked) return;
+      try {
+        if (!sharedAudioCtx) sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+        const osc = sharedAudioCtx.createOscillator(), gain = sharedAudioCtx.createGain();
+        osc.type = type === 'reveal' ? 'triangle' : 'sine';
+        if (type === 'tick') {
+          osc.frequency.setValueAtTime(820, sharedAudioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(420, sharedAudioCtx.currentTime + 0.035);
+          gain.gain.setValueAtTime(0.04, sharedAudioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, sharedAudioCtx.currentTime + 0.04);
+          osc.connect(gain); gain.connect(sharedAudioCtx.destination);
+          osc.start(); osc.stop(sharedAudioCtx.currentTime + 0.04);
+        } else if (type === 'reveal') {
+          osc.frequency.setValueAtTime(440, sharedAudioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, sharedAudioCtx.currentTime + 0.28);
+          gain.gain.setValueAtTime(0.11, sharedAudioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, sharedAudioCtx.currentTime + 0.3);
+          osc.connect(gain); gain.connect(sharedAudioCtx.destination);
+          osc.start(); osc.stop(sharedAudioCtx.currentTime + 0.3);
+        } else {
+          osc.frequency.setValueAtTime(type === 'send' ? 520 : 660, sharedAudioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(type === 'send' ? 740 : 460, sharedAudioCtx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.07, sharedAudioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, sharedAudioCtx.currentTime + 0.085);
+          osc.connect(gain); gain.connect(sharedAudioCtx.destination);
+          osc.start(); osc.stop(sharedAudioCtx.currentTime + 0.085);
+        }
+      } catch(e) {}
+    };
+
+    window.openLightbox = src => { document.getElementById('lightboxImg').src = src; document.getElementById('imageLightbox').classList.add('open'); };
+    window.closeLightbox = () => document.getElementById('imageLightbox').classList.remove('open');
+    window.closeGiftInspect = () => {
+      if (window.isUpgradingNow) return;
+      document.getElementById('giftInspectModal').classList.remove('open');
+    };
+
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        window.closeLightbox();
+        window.closeGiftInspect();
+        document.getElementById('partnerProfileModal')?.classList.remove('open');
+        document.getElementById('createRoomModal')?.classList.remove('open');
+        document.getElementById('settingsPanel')?.classList.remove('open');
+        document.getElementById('adminActionModal')?.classList.remove('open');
+        document.getElementById('adminPanel')?.classList.remove('open');
+      }
+    });
+
+    window.setAccentTheme = (name, accent, dark) => {
+      document.documentElement.style.setProperty('--accent', accent);
+      document.documentElement.style.setProperty('--accent-dark', dark);
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active-theme', btn.dataset.theme === name);
+      });
+      localStorage.setItem('orbit_accent', JSON.stringify({name, accent, dark}));
+    };
+  </script>
+
+  <!-- FIREBASE, КОНСТРУКТОР NFT СОЗДАТЕЛЯ, 18 ФОНОВ И ПЕРЕДАЧА ПОДАРКОВ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, setDoc, getDoc, getDocs, where, deleteDoc, increment, arrayUnion, runTransaction } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBuXgS0UO5TNpDpLPvg4eGxqcEqsJs_DfY",
+      authDomain: "orbit-messager.firebaseapp.com",
+      projectId: "orbit-messager",
+      storageBucket: "orbit-messager.firebasestorage.app",
+      messagingSenderId: "258011451019",
+      appId: "1:258011451019:web:78d1ad2a3d1331ccb64e8e",
+      measurementId: "G-9KXS4003KM"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    window.db = db;
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function isCreatorUser(username) {
+      return String(username || '').toLowerCase() === 'white';
+    }
+
+    function getCreatorBadgeHTML() {
+      return `<span class="creator-pill"><svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>Создатель Orbit</span>`;
+    }
+
+    // =========================================================================
+    // 18 РЕДКИХ ФОНОВ (ВКЛЮЧАЯ BLACK И ONYX BLACK)
+    // =========================================================================
+    const NFT_BACKDROPS = [
+      { name: 'Onyx Black', rarity: 'Singular (0.05%)', gradient: 'radial-gradient(circle at 50% 28%, #27272a 0%, #09090b 52%, #000000 100%)' },
+      { name: 'Black', rarity: 'Immortal (0.1%)', gradient: 'radial-gradient(circle at 50% 30%, #18181b 0%, #050505 58%, #000000 100%)' },
+      { name: 'Hyperion Gold', rarity: 'Immortal (0.2%)', gradient: 'radial-gradient(circle at 50% 30%, #fde047 0%, #b45309 52%, #290f02 100%)' },
+      { name: 'Midnight Onyx', rarity: 'Immortal (0.3%)', gradient: 'radial-gradient(circle at 50% 30%, #475569 0%, #0f172a 55%, #020617 100%)' },
+      { name: 'Astral Mirage', rarity: 'Cosmic (0.5%)', gradient: 'radial-gradient(circle at 50% 30%, #2dd4bf 0%, #3b0764 60%, #090514 100%)' },
+      { name: 'Abyssal Void', rarity: 'Cosmic (0.6%)', gradient: 'radial-gradient(circle at 50% 30%, #6366f1 0%, #1e1b4b 60%, #090d16 100%)' },
+      { name: 'Starlight Champagne', rarity: 'Legendary (0.7%)', gradient: 'radial-gradient(circle at 50% 30%, #fef08a 0%, #713f12 60%, #1c1917 100%)' },
+      { name: 'Golden Nebula', rarity: 'Legendary (0.8%)', gradient: 'radial-gradient(circle at 50% 30%, #fbbf24 0%, #78350f 60%, #1c1917 100%)' },
+      { name: 'Solar Flare', rarity: 'Legendary (0.9%)', gradient: 'radial-gradient(circle at 50% 30%, #f97316 0%, #7c2d12 60%, #1c0a00 100%)' },
+      { name: 'Blood Moon', rarity: 'Mythic (1.0%)', gradient: 'radial-gradient(circle at 50% 30%, #dc2626 0%, #450a0a 60%, #090202 100%)' },
+      { name: 'Quantum Plasma', rarity: 'Mythic (1.1%)', gradient: 'radial-gradient(circle at 50% 30%, #ec4899 0%, #4c1d95 55%, #090514 100%)' },
+      { name: 'Cyber Violet', rarity: 'Mythic (1.2%)', gradient: 'radial-gradient(circle at 50% 30%, #d946ef 0%, #581c87 55%, #1e1b4b 100%)' },
+      { name: 'Toxic Singularity', rarity: 'Epic (1.9%)', gradient: 'radial-gradient(circle at 50% 30%, #a3e635 0%, #365314 58%, #0f1c05 100%)' },
+      { name: 'Arctic Aurora', rarity: 'Epic (2.1%)', gradient: 'radial-gradient(circle at 50% 30%, #38bdf8 0%, #0c4a6e 58%, #082f49 100%)' },
+      { name: 'Crimson Pulse', rarity: 'Epic (2.5%)', gradient: 'radial-gradient(circle at 50% 30%, #f43f5e 0%, #881337 60%, #2a0815 100%)' },
+      { name: 'Sakura Neon', rarity: 'Rare (3.5%)', gradient: 'radial-gradient(circle at 50% 30%, #f472b6 0%, #831843 60%, #2e071b 100%)' },
+      { name: 'Royal Sapphire', rarity: 'Rare (3.8%)', gradient: 'radial-gradient(circle at 50% 30%, #60a5fa 0%, #1e3a8a 60%, #0a1128 100%)' },
+      { name: 'Emerald Matrix', rarity: 'Rare (4.0%)', gradient: 'radial-gradient(circle at 50% 30%, #10b981 0%, #064e3b 55%, #022c22 100%)' }
+    ];
+
+    const NFT_PATTERNS = [
+      { name: 'Sacred Geometry', chance: '1.2%' },
+      { name: 'Quantum Matrix', chance: '2.4%' },
+      { name: 'Astral Runes', chance: '0.8%' },
+      { name: 'Cyber Circuit', chance: '3.1%' },
+      { name: 'Supernova Rings', chance: '1.5%' },
+      { name: 'Singularity Grid', chance: '0.4%' },
+      { name: 'Imperial Filigree', chance: '0.9%' },
+      { name: 'Void Constellation', chance: '1.8%' }
+    ];
+
+    // =========================================================================
+    // 12 БАЗОВЫХ АРТЕФАКТОВ И 72 УНИКАЛЬНЫЕ 3D-МОДЕЛИ (ПО 6 СКИНОВ НА КАЖДЫЙ NFT)
+    // =========================================================================
+    const BASE_COLLECTIONS = [
+      {
+        baseId: 'pepe',
+        name: 'Plush Pepe',
+        model: 'pepe',
+        normalPrice: 150,
+        nftPrice: 2500,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Original Emerald', chance: '35%', colors: ['#4ade80', '#16a34a', '#064e3b'], accessory: 'crown' },
+          { name: 'Golden Pharaoh', chance: '18%', colors: ['#fef08a', '#eab308', '#713f12'], accessory: 'halo' },
+          { name: 'Cyberpunk Neon', chance: '15%', colors: ['#38bdf8', '#a855f7', '#1e1b4b'], accessory: 'visor' },
+          { name: 'Crimson Demon', chance: '14%', colors: ['#fb7185', '#dc2626', '#450a0a'], accessory: 'flames' },
+          { name: 'Onyx Monochrome', chance: '12%', colors: ['#e4e4e7', '#3f3f46', '#09090b'], accessory: 'halo' },
+          { name: 'Diamond Frost', chance: '6%', colors: ['#e0f2fe', '#38bdf8', '#0c4a6e'], accessory: 'crown' }
+        ]
+      },
+      {
+        baseId: 'durov_cap',
+        name: "Durov's Cap",
+        model: 'cap',
+        normalPrice: 250,
+        nftPrice: 5000,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Stealth Indigo', chance: '35%', colors: ['#818cf8', '#4f46e5', '#1e1b4b'], accessory: 'star' },
+          { name: 'Founder Gold', chance: '20%', colors: ['#fde047', '#d97706', '#451a03'], accessory: 'crown' },
+          { name: 'Matrix Hacker', chance: '16%', colors: ['#34d399', '#059669', '#022c22'], accessory: 'visor' },
+          { name: 'Crimson Executive', chance: '14%', colors: ['#fda4af', '#e11d48', '#4c0519'], accessory: 'flames' },
+          { name: 'Onyx Pitch Black', chance: '10%', colors: ['#a1a1aa', '#27272a', '#000000'], accessory: 'halo' },
+          { name: 'Astral Hologram', chance: '5%', colors: ['#f0abfc', '#9333ea', '#2e1065'], accessory: 'wings' }
+        ]
+      },
+      {
+        baseId: 'astral_shard',
+        name: 'Astral Shard',
+        model: 'crystal',
+        normalPrice: 180,
+        nftPrice: 3200,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Amethyst Prism', chance: '34%', colors: ['#f0abfc', '#c026d3', '#4a044e'], accessory: 'halo' },
+          { name: 'Emerald Krypton', chance: '22%', colors: ['#6ee7b7', '#10b981', '#064e3b'], accessory: 'star' },
+          { name: 'Blood Ruby', chance: '18%', colors: ['#fda4af', '#e11d48', '#881337'], accessory: 'flames' },
+          { name: 'Solar Amber', chance: '13%', colors: ['#fef08a', '#f59e0b', '#78350f'], accessory: 'crown' },
+          { name: 'Glacier Diamond', chance: '9%', colors: ['#e0f2fe', '#0284c7', '#082f49'], accessory: 'wings' },
+          { name: 'Black Obsidian', chance: '4%', colors: ['#d4d4d8', '#27272a', '#000000'], accessory: 'halo' }
+        ]
+      },
+      {
+        baseId: 'eternal_rose',
+        name: 'Eternal Rose',
+        model: 'rose',
+        normalPrice: 120,
+        nftPrice: 1800,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Velvet Crimson', chance: '36%', colors: ['#fda4af', '#e11d48', '#881337'], accessory: 'star' },
+          { name: 'Midas Gold', chance: '20%', colors: ['#fef08a', '#eab308', '#713f12'], accessory: 'halo' },
+          { name: 'Frozen Sapphire', chance: '16%', colors: ['#bae6fd', '#0284c7', '#0c4a6e'], accessory: 'wings' },
+          { name: 'Black Dahlia', chance: '14%', colors: ['#a1a1aa', '#27272a', '#050505'], accessory: 'flames' },
+          { name: 'Neon Orchid', chance: '9%', colors: ['#f5d0fe', '#c026d3', '#4a044e'], accessory: 'crown' },
+          { name: 'Celestial White', chance: '5%', colors: ['#ffffff', '#cbd5e1', '#334155'], accessory: 'halo' }
+        ]
+      },
+      {
+        baseId: 'genesis_crown',
+        name: 'Genesis Crown',
+        model: 'crown',
+        normalPrice: 500,
+        nftPrice: 10000,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Imperial Gold', chance: '35%', colors: ['#fef08a', '#f59e0b', '#78350f'], accessory: 'halo' },
+          { name: 'Platinum Sovereign', chance: '20%', colors: ['#f8fafc', '#94a3b8', '#1e293b'], accessory: 'wings' },
+          { name: 'Blood Emperor', chance: '17%', colors: ['#fca5a5', '#dc2626', '#450a0a'], accessory: 'flames' },
+          { name: 'Onyx Overlord', chance: '14%', colors: ['#e4e4e7', '#27272a', '#000000'], accessory: 'star' },
+          { name: 'Jade Dynasty', chance: '9%', colors: ['#6ee7b7', '#059669', '#022c22'], accessory: 'halo' },
+          { name: 'Quantum Divinity', chance: '5%', colors: ['#67e8f9', '#3b82f6', '#172554'], accessory: 'wings' }
+        ]
+      },
+      {
+        baseId: 'cyber_helm',
+        name: 'Cyber Valkyrie',
+        model: 'helm',
+        normalPrice: 220,
+        nftPrice: 2900,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Mecha Cobalt', chance: '35%', colors: ['#7dd3fc', '#0284c7', '#1e1b4b'], accessory: 'visor' },
+          { name: 'Shogun Crimson', chance: '20%', colors: ['#fda4af', '#dc2626', '#450a0a'], accessory: 'flames' },
+          { name: 'Paladin Prime', chance: '17%', colors: ['#fef08a', '#d97706', '#451a03'], accessory: 'wings' },
+          { name: 'Black SpecOps', chance: '14%', colors: ['#a1a1aa', '#27272a', '#000000'], accessory: 'visor' },
+          { name: 'Venom BioMech', chance: '9%', colors: ['#86efac', '#16a34a', '#052e16'], accessory: 'halo' },
+          { name: 'Archangel Zero', chance: '5%', colors: ['#ffffff', '#a855f7', '#3b0764'], accessory: 'wings' }
+        ]
+      },
+      {
+        baseId: 'quantum_orb',
+        name: 'Quantum Core',
+        model: 'orb',
+        normalPrice: 200,
+        nftPrice: 4200,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Singularity Violet', chance: '34%', colors: ['#e879f9', '#9333ea', '#3b0764'], accessory: 'halo' },
+          { name: 'Supernova Sun', chance: '21%', colors: ['#fde047', '#ea580c', '#7c2d12'], accessory: 'flames' },
+          { name: 'Cryo Pulsar', chance: '17%', colors: ['#67e8f9', '#0284c7', '#082f49'], accessory: 'star' },
+          { name: 'Gamma Reactor', chance: '14%', colors: ['#4ade80', '#15803d', '#052e16'], accessory: 'halo' },
+          { name: 'Crimson Quasar', chance: '9%', colors: ['#fb7185', '#be123c', '#4c0519'], accessory: 'flames' },
+          { name: 'Black Hole Horizon', chance: '5%', colors: ['#e4e4e7', '#18181b', '#000000'], accessory: 'wings' }
+        ]
+      },
+      {
+        baseId: 'vintage_watch',
+        name: 'Chrono Swiss',
+        model: 'watch',
+        normalPrice: 350,
+        nftPrice: 5500,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Geneva Gold', chance: '35%', colors: ['#fde047', '#ca8a04', '#422006'], accessory: 'crown' },
+          { name: 'Titanium Silver', chance: '21%', colors: ['#f1f5f9', '#64748b', '#0f172a'], accessory: 'star' },
+          { name: 'Rose Gold Tourbillon', chance: '17%', colors: ['#fecdd3', '#e11d48', '#881337'], accessory: 'halo' },
+          { name: 'Submariner Emerald', chance: '13%', colors: ['#6ee7b7', '#047857', '#022c22'], accessory: 'crown' },
+          { name: 'Onyx Ceramic', chance: '9%', colors: ['#a1a1aa', '#27272a', '#000000'], accessory: 'wings' },
+          { name: 'Skeleton Meteorite', chance: '5%', colors: ['#e879f9', '#6b21a8', '#090d16'], accessory: 'halo' }
+        ]
+      },
+      {
+        baseId: 'neon_katana',
+        name: 'Ronin Blade',
+        model: 'katana',
+        normalPrice: 280,
+        nftPrice: 3800,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Muramasa Blood', chance: '35%', colors: ['#fca5a5', '#dc2626', '#450a0a'], accessory: 'flames' },
+          { name: 'Cyberia Plasma', chance: '20%', colors: ['#67e8f9', '#0284c7', '#082f49'], accessory: 'visor' },
+          { name: 'Shogun Gold', chance: '17%', colors: ['#fef08a', '#d97706', '#451a03'], accessory: 'crown' },
+          { name: 'Viper Poison', chance: '14%', colors: ['#86efac', '#15803d', '#052e16'], accessory: 'flames' },
+          { name: 'Onyx Shadowblade', chance: '9%', colors: ['#d4d4d8', '#27272a', '#000000'], accessory: 'halo' },
+          { name: 'White Lotus', chance: '5%', colors: ['#ffffff', '#94a3b8', '#0f172a'], accessory: 'wings' }
+        ]
+      },
+      {
+        baseId: 'void_diamond',
+        name: 'Starlight Ring',
+        model: 'ring',
+        normalPrice: 400,
+        nftPrice: 6400,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Tiffany Sapphire', chance: '35%', colors: ['#bae6fd', '#0284c7', '#0c4a6e'], accessory: 'star' },
+          { name: 'Imperial Diamond', chance: '20%', colors: ['#ffffff', '#94a3b8', '#1e293b'], accessory: 'crown' },
+          { name: 'Pink Star', chance: '17%', colors: ['#f9a8d4', '#db2777', '#500724'], accessory: 'halo' },
+          { name: 'Sovereign Gold', chance: '14%', colors: ['#fef08a', '#eab308', '#713f12'], accessory: 'crown' },
+          { name: 'Black Diamond', chance: '9%', colors: ['#d4d4d8', '#27272a', '#000000'], accessory: 'star' },
+          { name: 'Astral Eternity', chance: '5%', colors: ['#e879f9', '#7e22ce', '#1e1b4b'], accessory: 'wings' }
+        ]
+      },
+      {
+        baseId: 'solar_chalice',
+        name: 'Imperial Grail',
+        model: 'trophy',
+        normalPrice: 320,
+        nftPrice: 7500,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Champions Gold', chance: '35%', colors: ['#fef08a', '#ea580c', '#7c2d12'], accessory: 'crown' },
+          { name: 'Silver Prestige', chance: '20%', colors: ['#f8fafc', '#64748b', '#0f172a'], accessory: 'star' },
+          { name: 'Ruby Chalice', chance: '17%', colors: ['#fda4af', '#e11d48', '#4c0519'], accessory: 'flames' },
+          { name: 'Emerald Goblet', chance: '14%', colors: ['#6ee7b7', '#10b981', '#064e3b'], accessory: 'halo' },
+          { name: 'Onyx Relic', chance: '9%', colors: ['#a1a1aa', '#27272a', '#000000'], accessory: 'wings' },
+          { name: 'Celestial Cup', chance: '5%', colors: ['#67e8f9', '#6366f1', '#1e1b4b'], accessory: 'crown' }
+        ]
+      },
+      {
+        baseId: 'starship',
+        name: 'Voyager X',
+        model: 'rocket',
+        normalPrice: 190,
+        nftPrice: 3100,
+        upgradeCost: 250,
+        variants: [
+          { name: 'Orbital Vanguard', chance: '35%', colors: ['#99f6e4', '#0d9488', '#134e4a'], accessory: 'flames' },
+          { name: 'Apollo Gold', chance: '20%', colors: ['#fef08a', '#d97706', '#451a03'], accessory: 'star' },
+          { name: 'Red Planet', chance: '17%', colors: ['#fca5a5', '#dc2626', '#450a0a'], accessory: 'flames' },
+          { name: 'Blackbird Stealth', chance: '14%', colors: ['#a1a1aa', '#27272a', '#000000'], accessory: 'visor' },
+          { name: 'Nebula Cruiser', chance: '9%', colors: ['#e879f9', '#7e22ce', '#2e1065'], accessory: 'halo' },
+          { name: 'Hyperdrive White', chance: '5%', colors: ['#ffffff', '#38bdf8', '#0c4a6e'], accessory: 'wings' }
+        ]
+      }
+    ];
+
+    const GIFT_CATALOG = [
+      ...BASE_COLLECTIONS.map(c => ({
+        id: 'normal_' + c.baseId,
+        baseId: c.baseId,
+        type: 'normal',
+        name: c.name,
+        price: c.normalPrice,
+        upgradeCost: c.upgradeCost,
+        model: c.model,
+        colors: c.variants[0].colors,
+        variantName: 'Base Edition'
+      })),
+      ...BASE_COLLECTIONS.map((c, idx) => ({
+        id: 'nft_' + c.baseId,
+        baseId: c.baseId,
+        type: 'nft',
+        name: c.name,
+        price: c.nftPrice,
+        rarity: NFT_BACKDROPS[idx % NFT_BACKDROPS.length].rarity,
+        bgName: NFT_BACKDROPS[idx % NFT_BACKDROPS.length].name,
+        gradient: NFT_BACKDROPS[idx % NFT_BACKDROPS.length].gradient,
+        model: c.model,
+        colors: c.variants[1].colors,
+        variantName: c.variants[1].name,
+        accessory: c.variants[1].accessory
+      }))
+    ];
+
+    // =========================================================================
+    // ПРОЦЕДУРНЫЙ 3D-РЕНДЕРЕР
+    // =========================================================================
+    function createRealisticArtifactSVG(modelKey, c1, c2, c3, accessory = null) {
+      const uid = modelKey + '_' + Math.random().toString(36).slice(2, 7);
+      let geometry = '';
+      let accOverlay = '';
+
+      switch (modelKey) {
+        case 'crystal':
+          geometry = `
+            <polygon points="50,8 82,36 70,90 30,90 18,36" fill="url(#g1_${uid})" stroke="${c1}" stroke-width="1.2"/>
+            <polygon points="50,8 82,36 50,54" fill="url(#g2_${uid})" opacity="0.85"/>
+            <polygon points="50,8 18,36 50,54" fill="#ffffff" opacity="0.35"/>
+            <polygon points="18,36 50,54 30,90" fill="url(#g3_${uid})" opacity="0.9"/>
+            <polygon points="82,36 50,54 70,90" fill="${c3}" opacity="0.65"/>
+            <polygon points="50,54 70,90 30,90" fill="url(#g1_${uid})" opacity="0.95"/>
+            <polyline points="30,24 50,14 66,28" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+          `;
+          break;
+        case 'crown':
+          geometry = `
+            <path d="M14,74 L86,74 L80,84 L20,84 Z" fill="url(#g3_${uid})" stroke="${c1}" stroke-width="1.2"/>
+            <path d="M14,72 L22,30 L40,52 L50,18 L60,52 L78,30 L86,72 Z" fill="url(#g1_${uid})" stroke="#fef08a" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M50,18 L60,52 L50,72 L40,52 Z" fill="url(#g2_${uid})" opacity="0.75"/>
+            <circle cx="50" cy="15" r="5" fill="#ffffff"/>
+            <circle cx="21" cy="27" r="4" fill="${c2}"/>
+            <circle cx="79" cy="27" r="4" fill="${c2}"/>
+            <circle cx="50" cy="58" r="5.5" fill="${c1}" stroke="#ffffff" stroke-width="1"/>
+            <circle cx="32" cy="61" r="4" fill="#ffffff"/>
+            <circle cx="68" cy="61" r="4" fill="#ffffff"/>
+          `;
+          break;
+        case 'pepe':
+          geometry = `
+            <ellipse cx="36" cy="34" rx="14" ry="16" fill="url(#g1_${uid})" stroke="${c3}" stroke-width="1.5"/>
+            <ellipse cx="64" cy="34" rx="14" ry="16" fill="url(#g1_${uid})" stroke="${c3}" stroke-width="1.5"/>
+            <ellipse cx="36" cy="33" rx="9" ry="10" fill="#ffffff"/>
+            <ellipse cx="64" cy="33" rx="9" ry="10" fill="#ffffff"/>
+            <circle cx="38" cy="33" r="5" fill="#0f172a"/>
+            <circle cx="66" cy="33" r="5" fill="#0f172a"/>
+            <circle cx="36" cy="31" r="2" fill="#ffffff"/>
+            <circle cx="64" cy="31" r="2" fill="#ffffff"/>
+            <ellipse cx="50" cy="58" rx="34" ry="26" fill="url(#g1_${uid})" stroke="${c1}" stroke-width="1.5"/>
+            <path d="M24,62 Q50,74 76,62" fill="none" stroke="#e11d48" stroke-width="5" stroke-linecap="round"/>
+            <ellipse cx="50" cy="48" rx="26" ry="10" fill="#ffffff" opacity="0.18"/>
+            <path d="M35,18 L50,6 L65,18 Z" fill="url(#g2_${uid})" stroke="#fde047" stroke-width="1.2"/>
+          `;
+          break;
+        case 'cap':
+          geometry = `
+            <path d="M18,56 C18,26 82,26 82,56 Z" fill="url(#g1_${uid})" stroke="${c1}" stroke-width="1.5"/>
+            <path d="M50,26 C64,26 76,38 78,56 L50,56 Z" fill="url(#g3_${uid})" opacity="0.6"/>
+            <path d="M14,55 C30,48 68,48 92,62 C78,72 36,70 14,55 Z" fill="url(#g2_${uid})" stroke="${c1}" stroke-width="1.5"/>
+            <circle cx="50" cy="27" r="4" fill="${c2}"/>
+            <path d="M34,42 L46,37 L42,49 Z" fill="#ffffff" opacity="0.85"/>
+          `;
+          break;
+        case 'watch':
+          geometry = `
+            <rect x="38" y="8" width="24" height="84" rx="6" fill="url(#g3_${uid})" stroke="${c1}" stroke-width="1.2"/>
+            <circle cx="50" cy="50" r="28" fill="url(#g1_${uid})" stroke="#fef08a" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="22" fill="#090d16" stroke="${c2}" stroke-width="1"/>
+            <line x1="50" y1="50" x2="50" y2="35" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="50" y1="50" x2="63" y2="50" stroke="${c1}" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="50" cy="50" r="3" fill="#fbbf24"/>
+          `;
+          break;
+        case 'rose':
+          geometry = `
+            <path d="M50,52 L50,90" stroke="#10b981" stroke-width="4.5" stroke-linecap="round"/>
+            <path d="M50,72 Q68,64 62,78 Q54,80 50,72 Z" fill="#10b981"/>
+            <path d="M50,64 Q32,56 38,70 Q46,72 50,64 Z" fill="#059669"/>
+            <circle cx="50" cy="36" r="22" fill="url(#g1_${uid})"/>
+            <path d="M32,32 C36,14 64,14 68,32 C72,48 50,58 50,58 C50,58 28,48 32,32 Z" fill="url(#g2_${uid})" stroke="#ffffff" stroke-width="1.2"/>
+            <path d="M40,30 C44,20 56,20 60,30 C56,42 44,42 40,30 Z" fill="url(#g3_${uid})"/>
+            <circle cx="50" cy="28" r="6" fill="#ffffff" opacity="0.35"/>
+          `;
+          break;
+        case 'orb':
+          geometry = `
+            <ellipse cx="50" cy="84" rx="22" ry="6" fill="url(#g3_${uid})" stroke="${c1}" stroke-width="1.2"/>
+            <circle cx="50" cy="48" r="30" fill="url(#g1_${uid})" stroke="#ffffff" stroke-width="1.2"/>
+            <ellipse cx="50" cy="48" rx="42" ry="13" fill="none" stroke="${c1}" stroke-width="2.5" transform="rotate(-22 50 48)"/>
+            <ellipse cx="50" cy="48" rx="42" ry="13" fill="none" stroke="${c2}" stroke-width="1.5" transform="rotate(28 50 48)" opacity="0.7"/>
+            <circle cx="39" cy="36" r="8" fill="#ffffff" opacity="0.55"/>
+          `;
+          break;
+        case 'katana':
+          geometry = `
+            <line x1="20" y1="80" x2="82" y2="18" stroke="url(#g1_${uid})" stroke-width="7" stroke-linecap="round"/>
+            <line x1="22" y1="78" x2="80" y2="20" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <ellipse cx="34" cy="66" rx="10" ry="4" transform="rotate(45 34 66)" fill="url(#g2_${uid})" stroke="#fef08a" stroke-width="1.5"/>
+            <line x1="16" y1="84" x2="32" y2="68" stroke="${c2}" stroke-width="8" stroke-linecap="round"/>
+          `;
+          break;
+        case 'helm':
+          geometry = `
+            <path d="M24,52 C24,22 76,22 76,52 L72,80 L50,88 L28,80 Z" fill="url(#g1_${uid})" stroke="${c1}" stroke-width="1.5"/>
+            <polygon points="32,48 50,56 68,48 64,62 50,68 36,62" fill="#090d16" stroke="${c2}" stroke-width="1.5"/>
+            <polygon points="36,52 48,57 46,61 38,57" fill="${c1}"/>
+            <polygon points="64,52 52,57 54,61 62,57" fill="${c1}"/>
+            <path d="M46,16 L50,8 L54,16 L52,42 L48,42 Z" fill="url(#g2_${uid})"/>
+          `;
+          break;
+        case 'trophy':
+          geometry = `
+            <rect x="34" y="78" width="32" height="10" rx="3" fill="url(#g3_${uid})" stroke="#fef08a" stroke-width="1"/>
+            <rect x="45" y="58" width="10" height="22" fill="url(#g2_${uid})"/>
+            <path d="M28,18 L72,18 L66,52 C64,64 36,64 34,52 Z" fill="url(#g1_${uid})" stroke="#fef08a" stroke-width="1.5"/>
+            <path d="M28,24 C14,24 14,44 32,46" fill="none" stroke="url(#g1_${uid})" stroke-width="5"/>
+            <path d="M72,24 C86,24 86,44 68,46" fill="none" stroke="url(#g1_${uid})" stroke-width="5"/>
+            <polygon points="50,26 53,34 61,34 55,39 57,47 50,42 43,47 45,39 39,34 47,34" fill="#ffffff" opacity="0.85"/>
+          `;
+          break;
+        case 'ring':
+          geometry = `
+            <circle cx="50" cy="58" r="24" fill="none" stroke="url(#g1_${uid})" stroke-width="8"/>
+            <circle cx="50" cy="58" r="24" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.6"/>
+            <polygon points="50,12 66,24 58,36 42,36 34,24" fill="url(#g2_${uid})" stroke="#e0f2fe" stroke-width="1.5"/>
+            <polygon points="50,12 58,36 42,36" fill="#ffffff" opacity="0.5"/>
+          `;
+          break;
+        case 'rocket':
+          geometry = `
+            <path d="M50,10 C68,28 68,58 62,72 L38,72 C32,58 32,28 50,10 Z" fill="url(#g1_${uid})" stroke="#ffffff" stroke-width="1.2"/>
+            <path d="M38,54 L22,74 L38,70 Z" fill="url(#g2_${uid})"/>
+            <path d="M62,54 L78,74 L62,70 Z" fill="url(#g2_${uid})"/>
+            <circle cx="50" cy="42" r="9" fill="#090d16" stroke="${c1}" stroke-width="2.5"/>
+            <path d="M42,72 L50,92 L58,72 Z" fill="#f97316"/>
+          `;
+          break;
+        default:
+          geometry = `
+            <rect x="20" y="36" width="60" height="48" rx="8" fill="url(#g1_${uid})" stroke="${c1}" stroke-width="1.5"/>
+            <rect x="16" y="26" width="68" height="14" rx="5" fill="url(#g2_${uid})" stroke="#ffffff" stroke-width="1"/>
+            <rect x="44" y="26" width="12" height="58" fill="url(#g3_${uid})"/>
+          `;
+      }
+
+      if (accessory === 'halo') {
+        accOverlay = `<ellipse cx="50" cy="8" rx="24" ry="5.5" fill="none" stroke="#fde047" stroke-width="3" opacity="0.95"/>`;
+      } else if (accessory === 'visor') {
+        accOverlay = `<rect x="24" y="28" width="52" height="11" rx="5.5" fill="#22d3ee" stroke="#ffffff" stroke-width="1.2" opacity="0.88"/>`;
+      } else if (accessory === 'wings') {
+        accOverlay = `
+          <path d="M16,48 Q2,26 14,16 Q22,28 24,42 Z" fill="#ffffff" opacity="0.85"/>
+          <path d="M84,48 Q98,26 86,16 Q78,28 76,42 Z" fill="#ffffff" opacity="0.85"/>
+        `;
+      } else if (accessory === 'flames') {
+        accOverlay = `
+          <circle cx="20" cy="24" r="3.5" fill="#fb923c" opacity="0.9"/>
+          <circle cx="82" cy="28" r="4" fill="#f43f5e" opacity="0.9"/>
+          <circle cx="50" cy="6" r="3" fill="#fde047" opacity="0.9"/>
+        `;
+      } else if (accessory === 'star') {
+        accOverlay = `
+          <polygon points="82,12 84,18 90,18 85,22 87,28 82,24 77,28 79,22 74,18 80,18" fill="#fef08a"/>
+        `;
+      }
+
+      return `
+        <svg viewBox="0 0 100 100" class="w-full h-full overflow-visible select-none">
+          <defs>
+            <linearGradient id="g1_${uid}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${c1}"/>
+              <stop offset="55%" stop-color="${c2}"/>
+              <stop offset="100%" stop-color="${c3}"/>
+            </linearGradient>
+            <linearGradient id="g2_${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="${c1}"/>
+            </linearGradient>
+            <linearGradient id="g3_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="${c2}"/>
+              <stop offset="100%" stop-color="${c3}"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="38" fill="${c1}" opacity="0.2" filter="blur(10px)"/>
+          ${geometry}
+          ${accOverlay}
+        </svg>
+      `;
+    }
+
+    const USERNAME_REGEX = /^[a-z1-9_]{4,16}$/;
+    let currentUser = null, currentUserData = null, activeTarget = null, unsubscribeMessages = null, pendingAttachment = null;
+    let isIntroFinished = false, firebaseStateResolved = false, cachedUser = null;
+    let allUsersCache = [], allRoomsCache = [], currentFilter = 'all', currentGiftFilter = 'all';
+    let giftCountersCache = {};
+    let mediaRecorder = null, recChunks = [], recStream = null, recTimer = null, recSeconds = 0, isRecording = false;
+    window.isUpgradingNow = false;
+    let inspectedGiftCurrent = null;
+
+    function formatRegDate(ts) {
+      if (!ts) return 'Сегодня';
+      try {
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch (e) {
+        return 'Сегодня';
+      }
+    }
+
+    async function allocateNextUserId() {
+      const counterRef = doc(db, "system", "counters");
+      try {
+        const nextNum = await runTransaction(db, async (transaction) => {
+          const snap = await transaction.get(counterRef);
+          let current = 0;
+          if (snap.exists() && typeof snap.data().userSeq === 'number') {
+            current = snap.data().userSeq;
+          } else {
+            const usersSnap = await getDocs(collection(db, "users"));
+            usersSnap.forEach(uDoc => {
+              const val = parseInt(uDoc.data().numericId || '0', 10);
+              if (!isNaN(val) && val > current) current = val;
+            });
+          }
+          const next = current + 1;
+          transaction.set(counterRef, { userSeq: next }, { merge: true });
+          return next;
+        });
+        return String(nextNum).padStart(6, '0');
+      } catch (e) {
+        const snap = await getDocs(collection(db, "users"));
+        return String(snap.size + 1).padStart(6, '0');
+      }
+    }
+
+    async function allocateNextGiftSerial(baseKey) {
+      const counterRef = doc(db, "system", "gift_counters");
+      try {
+        const nextSerial = await runTransaction(db, async (transaction) => {
+          const snap = await transaction.get(counterRef);
+          const data = snap.exists() ? snap.data() : {};
+          const current = typeof data[baseKey] === 'number' ? data[baseKey] : 0;
+          const next = current + 1;
+          transaction.set(counterRef, { [baseKey]: next }, { merge: true });
+          return next;
+        });
+        return String(nextSerial).padStart(6, '0');
+      } catch (e) {
+        const fallback = (giftCountersCache[baseKey] || 0) + 1;
+        return String(fallback).padStart(6, '0');
+      }
+    }
+
+    function renderGiftArtworkHTML(giftObj) {
+      if (giftObj.customImage) {
+        return `<img src="${escapeHTML(giftObj.customImage)}" alt="${escapeHTML(giftObj.name)}" class="w-full h-full object-contain rounded-xl" />`;
+      }
+      const model = giftObj.model || 'crystal';
+      const colors = giftObj.colors || ['#38bdf8', '#6366f1', '#1e1b4b'];
+      return createRealisticArtifactSVG(model, colors[0], colors[1], colors[2], giftObj.type === 'nft' ? giftObj.accessory : null);
+    }
+
+    window.addEventListener('load', () => {
+      try {
+        const st = JSON.parse(localStorage.getItem('orbit_accent') || 'null');
+        if (st) window.setAccentTheme(st.name, st.accent, st.dark);
+      } catch(e) {}
+      setTimeout(() => {
+        isIntroFinished = true;
+        document.getElementById('introOverlay').classList.add('intro-hidden');
+        document.getElementById('orbitCanvas').style.transform = 'scale(1.12)';
+        if (firebaseStateResolved) applyUIState(cachedUser);
+      }, 3400);
+    });
+
+    onAuthStateChanged(auth, async user => {
+      firebaseStateResolved = true;
+      cachedUser = user;
+      if (isIntroFinished) applyUIState(user);
+    });
+
+    function showToast(text, err = false) {
+      const t = document.getElementById('toast'), d = document.getElementById('toastDot');
+      document.getElementById('toastText').textContent = text;
+      d.className = `w-2 h-2 rounded-full ${err ? 'bg-rose-500' : 'bg-sky-400'}`;
+      t.classList.remove('opacity-0', 'translate-y-[-12px]');
+      setTimeout(() => t.classList.add('opacity-0', 'translate-y-[-12px]'), 2800);
+    }
+
+    // =========================================================================
+    // РЕНДЕР ВИТРИНЫ ПОДАРКОВ И NFT
+    // =========================================================================
+    function renderGifts(giftsArray, containerId, sectionId, countId, ownerName = 'Узел', isMyOwnProfile = false) {
+      const container = document.getElementById(containerId);
+      const section = document.getElementById(sectionId);
+      const countEl = document.getElementById(countId);
+      if (!container || !section) return;
+
+      container.innerHTML = '';
+      const visibleGifts = (giftsArray || []).filter(g => isMyOwnProfile || !g.hidden);
+
+      if (visibleGifts.length === 0) {
+        section.classList.add('hidden');
+        return;
+      }
+
+      section.classList.remove('hidden');
+      if (countEl) countEl.textContent = visibleGifts.length;
+
+      visibleGifts.slice().reverse().forEach(g => {
+        const isNft = g.type === 'nft';
+        const isHidden = Boolean(g.hidden);
+        const serialFormatted = `#${String(g.serial || '000001').padStart(6, '0')}`;
+        const artworkHtml = renderGiftArtworkHTML(g);
+        const hiddenBadgeHtml = isHidden
+          ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-rose-500/80 text-white uppercase tracking-wider">Скрыт</span>`
+          : '';
+
+        if (isNft) {
+          const wrap = document.createElement('div');
+          wrap.className = `gift-card-nft h-44 ${isHidden ? 'gift-hidden-state' : ''}`;
+          const bgStyle = g.gradient || NFT_BACKDROPS[0].gradient;
+
+          wrap.innerHTML = `
+            <div class="gift-card-nft-inner" style="background: ${bgStyle};">
+              <div class="nft-pattern-overlay"></div>
+              <div class="nft-glare"></div>
+              <div class="nft-corner-ribbon">NFT</div>
+              <div class="w-full flex justify-between items-center z-10 pr-6">
+                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-black/55 text-amber-300 border border-amber-400/30">${serialFormatted}</span>
+                ${hiddenBadgeHtml}
+              </div>
+              <div class="relative flex items-center justify-center my-0.5 z-10">
+                <div class="nft-aura-ring"></div>
+                <div class="w-16 h-16 artifact-3d-wrapper">${artworkHtml}</div>
+              </div>
+              <div class="w-full text-center z-10">
+                <div class="text-[11px] font-extrabold text-white truncate drop-shadow">${escapeHTML(g.name)}</div>
+                <div class="text-[9px] text-amber-200 font-semibold truncate">${escapeHTML(g.variantName || 'Rare Model')}</div>
+                <div class="text-[8px] text-purple-200/80 truncate">${escapeHTML(g.bgName || 'Cyber Violet')}</div>
+              </div>
+            </div>
+          `;
+          wrap.onclick = () => window.openGiftInspect(g, ownerName, isMyOwnProfile);
+          container.appendChild(wrap);
+        } else {
+          const card = document.createElement('div');
+          card.className = `gift-card-normal h-44 p-2.5 flex flex-col items-center justify-between ${isHidden ? 'gift-hidden-state' : ''}`;
+          card.innerHTML = `
+            <div class="w-full flex justify-between items-center">
+              <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-slate-300">${serialFormatted}</span>
+              ${isHidden ? hiddenBadgeHtml : '<span class="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300">GIFT</span>'}
+            </div>
+            <div class="w-16 h-16 artifact-3d-wrapper">${artworkHtml}</div>
+            <div class="w-full text-center">
+              <div class="text-[11px] font-semibold text-white truncate">${escapeHTML(g.name)}</div>
+              ${isMyOwnProfile
+                ? `<div class="mt-1 py-0.5 px-1.5 rounded bg-purple-500/25 border border-purple-400/40 text-[9px] font-bold text-purple-300">Улучшить / Управлять</div>`
+                : `<div class="text-[9px] text-slate-400 truncate">от @${escapeHTML(g.from || 'white')}</div>`
+              }
+            </div>
+          `;
+          card.onclick = () => window.openGiftInspect(g, ownerName, isMyOwnProfile);
+          container.appendChild(card);
+        }
+      });
+    }
+
+    // =========================================================================
+    // 3D-ОСМОТР ПОДАРКА, СКРЫТИЕ И ПЕРЕДАЧА
+    // =========================================================================
+    window.openGiftInspect = (gift, ownerName = 'Узел', isMyOwnGift = false) => {
+      if (window.isUpgradingNow) return;
+      inspectedGiftCurrent = gift;
+
+      const isNft = gift.type === 'nft';
+      const modal = document.getElementById('giftInspectModal');
+      const bgEl = document.getElementById('giftInspectBg');
+      const glareEl = document.getElementById('giftInspectGlare');
+      const badgeTop = document.getElementById('giftInspectBadgeTop');
+      const serialEl = document.getElementById('giftInspectSerial');
+      const attrBox = document.getElementById('giftInspectAttributes');
+      const upgradeBox = document.getElementById('upgradeActionBox');
+      const ownerControls = document.getElementById('ownerGiftControls');
+      const transferBox = document.getElementById('transferSelectorBox');
+      const artworkBox = document.getElementById('giftInspectArtwork');
+
+      artworkBox.className = 'w-28 h-28 flex items-center justify-center artifact-3d-wrapper';
+      artworkBox.innerHTML = renderGiftArtworkHTML(gift);
+      document.getElementById('giftInspectTitle').textContent = gift.name;
+
+      const serialFormatted = `#${String(gift.serial || '000001').padStart(6, '0')}`;
+      const dateFormatted = gift.date ? new Date(gift.date).toLocaleString('ru-RU', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Сегодня';
+
+      serialEl.textContent = serialFormatted;
+      serialEl.classList.remove('hidden');
+      document.getElementById('upgradeRouletteBanner').classList.add('hidden');
+      document.getElementById('upgradeAuraRing').classList.add('hidden');
+      transferBox.classList.add('hidden');
+
+      const isAdmin = isCreatorUser(currentUserData?.username);
+
+      if (isMyOwnGift) {
+        ownerControls.classList.remove('hidden');
+        document.getElementById('toggleHideGiftText').textContent = gift.hidden ? 'Показать в профиле' : 'Скрыть из профиля';
+        document.getElementById('toggleHideGiftBtn').onclick = () => window.toggleGiftVisibility(gift.id);
+        document.getElementById('openTransferGiftBtn').onclick = () => {
+          transferBox.classList.toggle('hidden');
+          renderTransferUsersList();
+        };
+      } else {
+        ownerControls.classList.add('hidden');
+      }
+
+      if (isNft) {
+        upgradeBox.classList.add('hidden');
+        bgEl.style.background = gift.gradient || NFT_BACKDROPS[0].gradient;
+        glareEl.classList.remove('hidden');
+        badgeTop.innerHTML = `<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 text-white shadow-lg">Коллекционный Артефакт NFT</span>`;
+        document.getElementById('giftInspectSubtitle').textContent = gift.comment ? `«${gift.comment}»` : 'Уникальный крипто-артефакт сети Orbit';
+
+        attrBox.innerHTML = `
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Владелец</span><span class="font-semibold text-white">${escapeHTML(ownerName)}</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Номер минта</span><span class="font-mono font-bold text-amber-400">${serialFormatted}</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">3D-Модель (Скин)</span><span class="font-semibold text-sky-300">${escapeHTML(gift.variantName || 'Original')} (${escapeHTML(gift.variantChance || '10%')})</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Фоновая матрица</span><span class="font-semibold text-purple-300">${escapeHTML(gift.bgName || 'Cyber Violet')} (${escapeHTML(gift.rarity || 'Mythic')})</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Орбитальный глиф</span><span class="font-semibold text-pink-400">${escapeHTML(gift.patternName || 'Sacred Geometry')} (${escapeHTML(gift.patternChance || '1.2%')})</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Видимость</span><span class="font-semibold ${gift.hidden ? 'text-rose-400' : 'text-emerald-400'}">${gift.hidden ? 'Скрыт владельцем' : 'Публичный'}</span></div>
+        `;
+      } else {
+        bgEl.style.background = 'radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.28), #0e1621 80%)';
+        glareEl.classList.add('hidden');
+        badgeTop.innerHTML = `<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-400/30">Обычный Подарок</span>`;
+        document.getElementById('giftInspectSubtitle').textContent = gift.comment ? `«${gift.comment}»` : 'Может быть улучшен в уникальный коллекционный NFT';
+
+        attrBox.innerHTML = `
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Владелец</span><span class="font-semibold text-white">${escapeHTML(ownerName)}</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Порядковый номер</span><span class="font-mono font-bold text-sky-400">${serialFormatted}</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Статус</span><span class="font-semibold text-purple-300">Доступно улучшение в NFT</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Видимость</span><span class="font-semibold ${gift.hidden ? 'text-rose-400' : 'text-emerald-400'}">${gift.hidden ? 'Скрыт владельцем' : 'Публичный'}</span></div>
+          <div class="flex justify-between py-2 px-3.5"><span class="text-slate-400">Дата получения</span><span class="text-slate-300">${dateFormatted}</span></div>
+        `;
+
+        if (isMyOwnGift) {
+          const cost = isAdmin ? 0 : (gift.upgradeCost || 250);
+          document.getElementById('upgradeCostBadge').textContent = isAdmin ? '0 ORB (Создатель)' : `${cost} ORB`;
+          upgradeBox.classList.remove('hidden');
+          document.getElementById('startUpgradeBtn').onclick = () => window.runGiftUpgradeAnimation(gift);
+        } else {
+          upgradeBox.classList.add('hidden');
+        }
+      }
+
+      modal.classList.add('open');
+    };
+
+    window.toggleGiftVisibility = async (giftId) => {
+      if (!currentUserData || !currentUser) return;
+      try {
+        let updatedGiftObj = null;
+        const updatedGifts = (currentUserData.gifts || []).map(g => {
+          if (g.id === giftId) {
+            updatedGiftObj = { ...g, hidden: !g.hidden };
+            return updatedGiftObj;
+          }
+          return g;
+        });
+
+        await setDoc(doc(db, "users", currentUser.uid), { gifts: updatedGifts }, { merge: true });
+        currentUserData.gifts = updatedGifts;
+        updateMyUI();
+
+        if (updatedGiftObj) {
+          showToast(updatedGiftObj.hidden ? 'Подарок скрыт из публичного профиля' : 'Подарок снова виден всем в профиле');
+          window.openGiftInspect(updatedGiftObj, currentUserData.name, true);
+        }
+      } catch (e) {
+        showToast('Ошибка изменения видимости: ' + e.message, true);
+      }
+    };
+
+    document.getElementById('cancelTransferBoxBtn').onclick = () => {
+      document.getElementById('transferSelectorBox').classList.add('hidden');
+    };
+    document.getElementById('transferSearchInput').oninput = () => renderTransferUsersList();
+
+    function renderTransferUsersList() {
+      const box = document.getElementById('transferUsersList');
+      const q = document.getElementById('transferSearchInput').value.toLowerCase().trim();
+      box.innerHTML = '';
+
+      const filtered = allUsersCache.filter(u =>
+        !q || u.title?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.numericId?.includes(q)
+      );
+
+      if (filtered.length === 0) {
+        box.innerHTML = `<div class="text-[11px] text-slate-500 text-center py-2">Узлы не найдены</div>`;
+        return;
+      }
+
+      filtered.forEach(u => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition';
+        row.innerHTML = `
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            <img src="${escapeHTML(u.avatar)}" class="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+            <div class="overflow-hidden">
+              <div class="text-xs font-semibold text-white truncate">${escapeHTML(u.title)}</div>
+              <div class="text-[10px] text-sky-400 font-mono truncate">@${escapeHTML(u.username)} • ID ${u.numericId}</div>
+            </div>
+          </div>
+          <button type="button" class="px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-[10px] transition flex-shrink-0">
+            Передать
+          </button>
+        `;
+        row.querySelector('button').onclick = () => window.transferGiftToUser(inspectedGiftCurrent, u);
+        box.appendChild(row);
+      });
+    }
+
+    window.transferGiftToUser = async (gift, targetUser) => {
+      if (!gift || !targetUser || !currentUser) return;
+      try {
+        const myRef = doc(db, "users", currentUser.uid);
+        const targetRef = doc(db, "users", targetUser.id);
+        const serialFormatted = `#${String(gift.serial || '000001').padStart(6, '0')}`;
+
+        await runTransaction(db, async (transaction) => {
+          const mySnap = await transaction.get(myRef);
+          const targetSnap = await transaction.get(targetRef);
+          if (!mySnap.exists() || !targetSnap.exists()) throw new Error('Профиль не найден');
+
+          const myGifts = mySnap.data().gifts || [];
+          const existsInMine = myGifts.some(g => g.id === gift.id);
+          if (!existsInMine) throw new Error('Этот подарок уже передан');
+
+          const updatedMyGifts = myGifts.filter(g => g.id !== gift.id);
+          const transferredGift = {
+            ...gift,
+            hidden: false,
+            from: currentUserData.username || 'orbit',
+            transferredAt: new Date().toISOString()
+          };
+          const updatedTargetGifts = [...(targetSnap.data().gifts || []), transferredGift];
+
+          transaction.update(myRef, { gifts: updatedMyGifts });
+          transaction.update(targetRef, { gifts: updatedTargetGifts });
+        });
+
+        const chatId = currentUser.uid < targetUser.id ? `${currentUser.uid}_${targetUser.id}` : `${targetUser.id}_${currentUser.uid}`;
+        await addDoc(collection(db, "chats", chatId, "messages"), {
+          text: `Передан ${gift.type === 'nft' ? `коллекционный NFT «${gift.name}» (${gift.variantName || 'Rare'}, фон ${gift.bgName || 'Onyx'})` : `подарок «${gift.name}»`} ${serialFormatted} новому владельцу ${targetUser.title}`,
+          senderId: currentUser.uid,
+          senderName: currentUserData.name,
+          senderUsername: currentUserData.username,
+          createdAt: serverTimestamp()
+        });
+
+        window.playPopSound('send');
+        window.closeGiftInspect();
+        showToast(`${gift.name} ${serialFormatted} успешно передан @${targetUser.username}!`);
+      } catch (err) {
+        showToast('Ошибка передачи: ' + err.message, true);
+      }
+    };
+
+    // АНИМАЦИЯ РУЛЕТКИ УЛУЧШЕНИЯ ОБЫЧНОГО ПОДАРКА В УНИКАЛЬНЫЙ NFT
+    window.runGiftUpgradeAnimation = async (giftToUpgrade) => {
+      if (window.isUpgradingNow || !currentUserData) return;
+      const isAdmin = isCreatorUser(currentUserData.username);
+      const cost = isAdmin ? 0 : (giftToUpgrade.upgradeCost || 250);
+
+      if (!isAdmin && (currentUserData.balance || 0) < cost) {
+        return showToast(`Недостаточно ORB для улучшения! Нужно ${cost} ORB`, true);
+      }
+
+      window.isUpgradingNow = true;
+      const upgradeBox = document.getElementById('upgradeActionBox');
+      const ownerControls = document.getElementById('ownerGiftControls');
+      const banner = document.getElementById('upgradeRouletteBanner');
+      const stepLbl = document.getElementById('rouletteStepLabel');
+      const valLbl = document.getElementById('rouletteValueLabel');
+      const bgEl = document.getElementById('giftInspectBg');
+      const artworkBox = document.getElementById('giftInspectArtwork');
+      const ringEl = document.getElementById('upgradeAuraRing');
+
+      upgradeBox.classList.add('hidden');
+      ownerControls.classList.add('hidden');
+      banner.classList.remove('hidden');
+      ringEl.classList.remove('hidden');
+      artworkBox.classList.add('upgrading-artifact');
+
+      const baseCol = BASE_COLLECTIONS.find(c => c.baseId === giftToUpgrade.baseId || c.model === giftToUpgrade.model) || BASE_COLLECTIONS[0];
+      const variants = baseCol.variants;
+
+      const chosenVariant = variants[Math.floor(Math.random() * variants.length)];
+      const chosenBackdrop = NFT_BACKDROPS[Math.floor(Math.random() * NFT_BACKDROPS.length)];
+      const chosenPattern = NFT_PATTERNS[Math.floor(Math.random() * NFT_PATTERNS.length)];
+
+      const totalTicks = 24;
+      for (let i = 0; i < totalTicks; i++) {
+        const tempVar = variants[i % variants.length];
+        const tempBg = NFT_BACKDROPS[(i * 3) % NFT_BACKDROPS.length];
+        const tempPat = NFT_PATTERNS[i % NFT_PATTERNS.length];
+
+        if (i < 10) {
+          stepLbl.textContent = '1/3 Выбор 3D-модели:';
+          valLbl.textContent = `${tempVar.name} (${tempVar.chance})`;
+        } else if (i < 18) {
+          stepLbl.textContent = '2/3 Генерация фона:';
+          valLbl.textContent = `${tempBg.name}`;
+        } else {
+          stepLbl.textContent = '3/3 Орбитальный глиф:';
+          valLbl.textContent = `${tempPat.name} (${tempPat.chance})`;
+        }
+
+        bgEl.style.background = tempBg.gradient;
+        artworkBox.innerHTML = createRealisticArtifactSVG(baseCol.model, tempVar.colors[0], tempVar.colors[1], tempVar.colors[2], tempVar.accessory);
+        window.playPopSound('tick');
+
+        const delay = 65 + Math.pow(i, 1.55) * 4;
+        await new Promise(r => setTimeout(r, delay));
+      }
+
+      try {
+        const upgradedGift = {
+          ...giftToUpgrade,
+          type: 'nft',
+          variantName: chosenVariant.name,
+          variantChance: chosenVariant.chance,
+          colors: chosenVariant.colors,
+          accessory: chosenVariant.accessory,
+          bgName: chosenBackdrop.name,
+          rarity: chosenBackdrop.rarity,
+          gradient: chosenBackdrop.gradient,
+          patternName: chosenPattern.name,
+          patternChance: chosenPattern.chance,
+          upgradedAt: new Date().toISOString()
+        };
+
+        const updatedGiftsArray = (currentUserData.gifts || []).map(g => g.id === giftToUpgrade.id ? upgradedGift : g);
+        const updatePayload = { gifts: updatedGiftsArray };
+        if (!isAdmin && cost > 0) {
+          updatePayload.balance = increment(-cost);
+        }
+
+        await setDoc(doc(db, "users", currentUser.uid), updatePayload, { merge: true });
+        currentUserData.gifts = updatedGiftsArray;
+
+        artworkBox.classList.remove('upgrading-artifact');
+        artworkBox.classList.add('upgraded-flash');
+        ringEl.classList.add('hidden');
+        banner.classList.add('hidden');
+
+        window.playPopSound('reveal');
+        window.isUpgradingNow = false;
+
+        showToast(`Улучшено в NFT: ${upgradedGift.name} (${chosenVariant.name}, фон ${chosenBackdrop.name})!`);
+        updateMyUI();
+        window.openGiftInspect(upgradedGift, currentUserData.name, true);
+      } catch (err) {
+        window.isUpgradingNow = false;
+        artworkBox.classList.remove('upgrading-artifact');
+        ringEl.classList.add('hidden');
+        banner.classList.add('hidden');
+        showToast('Ошибка сохранения апгрейда: ' + err.message, true);
+      }
+    };
+
+    // =========================================================================
+    // ИНИЦИАЛИЗАЦИЯ ПОЛЬЗОВАТЕЛЯ
+    // =========================================================================
+    async function applyUIState(user) {
+      const authEl = document.getElementById('authContainer'), msgEl = document.getElementById('messengerContainer');
+      if (user) {
+        currentUser = user;
+        authEl.classList.remove('active'); setTimeout(() => authEl.style.display = 'none', 500);
+        msgEl.style.display = 'flex'; setTimeout(() => msgEl.classList.add('active'), 50);
+
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+        const fbAvatar = user.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.uid}`;
+
+        if (!snap.exists()) {
+          const dName = (user.displayName || user.email.split('@')[0]).split(' ')[0];
+          const seqId = await allocateNextUserId();
+
+          currentUserData = {
+            uid: user.uid,
+            numericId: seqId,
+            email: user.email,
+            firstName: dName,
+            lastName: '',
+            name: dName,
+            username: (dName.toLowerCase().replace(/0/g, '1').replace(/[^a-z1-9_]/g, '') + '_' + Math.floor(111 + Math.random() * 888)).replace(/0/g, '9').slice(0, 16),
+            bio: 'В сети Orbit',
+            avatar: fbAvatar,
+            balance: 500,
+            gifts: [],
+            createdAt: serverTimestamp(),
+            lastActive: serverTimestamp()
+          };
+          await setDoc(userRef, currentUserData);
+        } else {
+          const e = snap.data();
+          let seqId = e.numericId;
+          if (!seqId || seqId === '000000') {
+            seqId = await allocateNextUserId();
+          }
+          currentUserData = {
+            ...e,
+            numericId: String(seqId).padStart(6, '0'),
+            balance: e.balance ?? 0,
+            gifts: e.gifts || [],
+            name: `${e.firstName || e.name || 'Имя'} ${e.lastName || ''}`.trim(),
+            avatar: e.avatar || fbAvatar
+          };
+          await setDoc(userRef, {
+            numericId: currentUserData.numericId,
+            name: currentUserData.name,
+            avatar: currentUserData.avatar,
+            lastActive: serverTimestamp()
+          }, { merge: true });
+        }
+
+        updateMyUI();
+        subscribeSidebarData();
+      } else {
+        currentUser = null; currentUserData = null; activeTarget = null;
+        if (unsubscribeMessages) unsubscribeMessages();
+        msgEl.classList.remove('active'); setTimeout(() => msgEl.style.display = 'none', 500);
+        authEl.style.display = 'flex'; setTimeout(() => authEl.classList.add('active'), 50);
+      }
+    }
+
+    function updateMyUI() {
+      if (!currentUserData) return;
+      const formattedId = String(currentUserData.numericId || '000001').padStart(6, '0');
+      const isAdmin = isCreatorUser(currentUserData.username);
+
+      document.getElementById('myMiniAvatar').src = currentUserData.avatar;
+      document.getElementById('myMiniName').textContent = currentUserData.name;
+      document.getElementById('myMiniUsername').textContent = '@' + currentUserData.username;
+      document.getElementById('myMiniIdBadge').textContent = 'ID ' + formattedId;
+      document.getElementById('myMiniCreatorBadge').classList.toggle('hidden', !isAdmin);
+
+      document.getElementById('settingsBalance').textContent = currentUserData.balance || 0;
+      document.getElementById('settingsUid').textContent = formattedId;
+      document.getElementById('settingsRegDate').textContent = formatRegDate(currentUserData.createdAt);
+
+      renderGifts(currentUserData.gifts, 'myGiftsContainer', 'myGiftsSection', 'myGiftsCount', currentUserData.name, true);
+      document.getElementById('adminPanelBtn').classList.toggle('hidden', !isAdmin);
+    }
+
+    // --- АВТОРИЗАЦИЯ ---
+    let mode = 'register';
+    document.getElementById('tabRegister').onclick = () => {
+      mode = 'register';
+      document.getElementById('tabRegister').className = 'py-2 text-xs font-semibold rounded-lg bg-[#2b5278] text-white shadow transition';
+      document.getElementById('tabLogin').className = 'py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+      document.getElementById('registerExtraFields').style.display = 'block';
+      document.getElementById('submitBtn').textContent = 'Создать аккаунт';
+    };
+    document.getElementById('tabLogin').onclick = () => {
+      mode = 'login';
+      document.getElementById('tabLogin').className = 'py-2 text-xs font-semibold rounded-lg bg-[#2b5278] text-white shadow transition';
+      document.getElementById('tabRegister').className = 'py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+      document.getElementById('registerExtraFields').style.display = 'none';
+      document.getElementById('submitBtn').textContent = 'Войти';
+    };
+
+    document.getElementById('authForm').onsubmit = async e => {
+      e.preventDefault();
+      const em = document.getElementById('emailInput').value.trim(), pw = document.getElementById('passwordInput').value;
+      const fn = document.getElementById('regFirstName').value.trim() || 'Имя', ln = document.getElementById('regLastName').value.trim(), un = document.getElementById('regUsername').value.trim().toLowerCase();
+
+      if (mode === 'register' && un && !USERNAME_REGEX.test(un)) {
+        document.getElementById('statusMsg').textContent = 'Юз: 4-16 символов (a-z, 1-9, _)';
+        return;
+      }
+
+      try {
+        if (mode === 'register') {
+          const finalUn = un || (fn.toLowerCase().replace(/0/g, '1').replace(/[^a-z1-9_]/g, '') + '_' + Math.floor(111 + Math.random() * 888)).replace(/0/g, '9').slice(0, 16);
+          const q = query(collection(db, "users"), where("username", "==", finalUn));
+          const snap = await getDocs(q);
+          if (!snap.empty) throw new Error('Этот @username уже занят');
+
+          const seqId = await allocateNextUserId();
+          const cred = await createUserWithEmailAndPassword(auth, em, pw);
+          await updateProfile(cred.user, { displayName: `${fn} ${ln}`.trim() });
+          await setDoc(doc(db, "users", cred.user.uid), {
+            uid: cred.user.uid,
+            numericId: seqId,
+            email: em,
+            firstName: fn,
+            lastName: ln,
+            name: `${fn} ${ln}`.trim(),
+            username: finalUn,
+            bio: 'В сети Orbit',
+            avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${cred.user.uid}`,
+            balance: 500,
+            gifts: [],
+            createdAt: serverTimestamp(),
+            lastActive: serverTimestamp()
+          });
+        } else {
+          await signInWithEmailAndPassword(auth, em, pw);
+        }
+      } catch(err) {
+        document.getElementById('statusMsg').textContent = err.message.includes('invalid') ? 'Неверные данные' : err.message;
+      }
+    };
+
+    document.getElementById('googleBtn')?.addEventListener('click', () => signInWithPopup(auth, new GoogleAuthProvider()));
+
+    // --- НАСТРОЙКИ ПРОФИЛЯ ---
+    document.getElementById('openSettingsBtn').onclick = () => {
+      if (!currentUserData) return;
+      document.getElementById('settingsFirstName').value = currentUserData.firstName || '';
+      document.getElementById('settingsLastName').value = currentUserData.lastName || '';
+      document.getElementById('settingsUsername').value = currentUserData.username || '';
+      document.getElementById('settingsBio').value = currentUserData.bio || '';
+      document.getElementById('bioCounter').textContent = `${(currentUserData.bio || '').length} / 120`;
+      document.getElementById('settingsAvatarUrl').value = currentUserData.avatar?.startsWith('http') ? currentUserData.avatar : '';
+      document.getElementById('settingsAvatarPreview').src = currentUserData.avatar;
+      updateMyUI();
+      document.getElementById('settingsPanel').classList.add('open');
+    };
+    document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsPanel').classList.remove('open');
+
+    document.getElementById('settingsBio').addEventListener('input', (e) => {
+      document.getElementById('bioCounter').textContent = `${e.target.value.length} / 120`;
+    });
+
+    document.getElementById('settingsUsername').addEventListener('input', (e) => {
+      const val = e.target.value.trim().toLowerCase();
+      const msg = document.getElementById('usernameValidationMsg');
+      if (USERNAME_REGEX.test(val)) {
+        msg.textContent = 'Формат @username корректен';
+        msg.className = 'text-[11px] text-emerald-400 mt-1 ml-1';
+      } else {
+        msg.textContent = 'Только строчные a-z, цифры 1-9 и _ (4–16 симв.)';
+        msg.className = 'text-[11px] text-rose-400 mt-1 ml-1';
+      }
+    });
+
+    document.getElementById('avatarFileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const compressed = await compressImageToDataURL(file, 256, 0.82);
+        document.getElementById('settingsAvatarPreview').src = compressed;
+        document.getElementById('settingsAvatarUrl').value = '';
+        showToast('Фото загружено! Нажмите «Сохранить профиль»');
+      } catch (err) {
+        showToast('Ошибка обработки фото', true);
+      }
+    });
+
+    document.getElementById('tabSetProfile').onclick = () => {
+      document.getElementById('tabSetProfile').className = 'py-1.5 text-xs font-semibold rounded-lg bg-[#2b5278] text-white transition';
+      document.getElementById('tabSetApp').className = 'py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+      document.getElementById('profileSettingsTab').classList.remove('hidden');
+      document.getElementById('appSettingsTab').classList.add('hidden');
+    };
+    document.getElementById('tabSetApp').onclick = () => {
+      document.getElementById('tabSetApp').className = 'py-1.5 text-xs font-semibold rounded-lg bg-[#2b5278] text-white transition';
+      document.getElementById('tabSetProfile').className = 'py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+      document.getElementById('appSettingsTab').classList.remove('hidden');
+      document.getElementById('profileSettingsTab').classList.add('hidden');
+    };
+
+    document.getElementById('settingsForm').onsubmit = async e => {
+      e.preventDefault();
+      const fn = document.getElementById('settingsFirstName').value.trim(), ln = document.getElementById('settingsLastName').value.trim();
+      const un = document.getElementById('settingsUsername').value.trim().toLowerCase(), bio = document.getElementById('settingsBio').value.trim();
+      const url = document.getElementById('settingsAvatarUrl').value.trim(), src = document.getElementById('settingsAvatarPreview').src;
+
+      if (!USERNAME_REGEX.test(un)) return showToast('Юз: 4-16 симв, a-z, 1-9, _', true);
+
+      try {
+        const q = query(collection(db, "users"), where("username", "==", un));
+        const snap = await getDocs(q);
+        let taken = false;
+        snap.forEach(d => { if (d.id !== currentUser.uid) taken = true; });
+        if (taken) throw new Error('Этот @username уже занят');
+
+        const finalAvatar = src?.startsWith('data:image') ? src : (url || src);
+        const upd = { uid: currentUser.uid, firstName: fn, lastName: ln, name: `${fn} ${ln}`.trim(), username: un, bio: bio, avatar: finalAvatar };
+        await setDoc(doc(db, "users", currentUser.uid), upd, { merge: true });
+
+        Object.assign(currentUserData, upd);
+        updateMyUI();
+        showToast('Профиль успешно сохранен!');
+        document.getElementById('settingsPanel').classList.remove('open');
+      } catch(err) { showToast(err.message, true); }
+    };
+
+    document.getElementById('fontSizeRange').oninput = e => {
+      const val = e.target.value + 'px';
+      document.documentElement.style.setProperty('--msg-size', val);
+      document.getElementById('fontSizeLabel').textContent = val;
+    };
+    document.getElementById('radiusRange').oninput = e => {
+      const val = e.target.value + 'px';
+      document.documentElement.style.setProperty('--msg-radius', val);
+      document.getElementById('radiusLabel').textContent = val;
+    };
+    document.getElementById('toggleOrbits').onchange = e => window.orbitsEnabled = e.target.checked;
+    document.getElementById('logoutBtn')?.addEventListener('click', () => signOut(auth));
+
+    // =========================================================================
+    // КАТАЛОГ И ЖИВОЙ КОНСТРУКТОР ВЫДАЧИ ПОДАРКОВ / NFT
+    // =========================================================================
+    window.adminTargetUid = null;
+    window.adminTargetName = '';
+
+    // При изменении селекторов фона или модели в конструкторе — карточки в каталоге сразу меняют свой предпросмотр!
+    document.getElementById('nftVariantSelect').onchange = () => renderGiftCatalogGrid();
+    document.getElementById('nftBgSelect').onchange = () => renderGiftCatalogGrid();
+
+    function renderGiftCatalogGrid() {
+      const grid = document.getElementById('giftCatalogGrid');
+      grid.innerHTML = '';
+      const isAdmin = isCreatorUser(currentUserData?.username);
+
+      const selectedBgName = document.getElementById('nftBgSelect').value;
+      const selectedVarIdx = document.getElementById('nftVariantSelect').value;
+      const previewBgObj = selectedBgName !== 'random' ? NFT_BACKDROPS.find(b => b.name === selectedBgName) : null;
+
+      const items = GIFT_CATALOG.filter(g => currentGiftFilter === 'all' || g.type === currentGiftFilter);
+
+      items.forEach(item => {
+        const isNft = item.type === 'nft';
+        const counterKey = item.baseId || item.id;
+        const nextSerialNum = String((giftCountersCache[counterKey] || 0) + 1).padStart(6, '0');
+        const priceLabel = isAdmin ? '0 ORB (Создатель)' : `${item.price} ORB`;
+
+        const baseCol = BASE_COLLECTIONS.find(c => c.baseId === item.baseId) || BASE_COLLECTIONS[0];
+        let previewVariant = baseCol.variants[1];
+        if (selectedVarIdx !== 'random') {
+          const idx = parseInt(selectedVarIdx, 10) || 0;
+          previewVariant = baseCol.variants[idx % baseCol.variants.length];
+        }
+
+        const displayColors = isNft ? previewVariant.colors : item.colors;
+        const displayAcc = isNft ? previewVariant.accessory : null;
+        const displayBgGradient = (isNft && previewBgObj) ? previewBgObj.gradient : item.gradient;
+        const displayBgTitle = (isNft && previewBgObj) ? previewBgObj.name : (selectedBgName === 'random' ? 'Случайный из 18 фонов' : item.bgName);
+        const displayVarTitle = isNft ? (selectedVarIdx === 'random' ? 'Случайная модель' : previewVariant.name) : 'Обычный подарок';
+
+        const artSvg = createRealisticArtifactSVG(item.model, displayColors[0], displayColors[1], displayColors[2], displayAcc);
+
+        if (isNft) {
+          const wrap = document.createElement('div');
+          wrap.className = 'gift-card-nft h-56';
+          wrap.innerHTML = `
+            <div class="gift-card-nft-inner" style="background: ${displayBgGradient};">
+              <div class="nft-pattern-overlay"></div>
+              <div class="nft-glare"></div>
+              <div class="nft-corner-ribbon">NFT</div>
+              <div class="w-full flex justify-between items-center z-10 pr-6">
+                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-black/55 text-amber-300 border border-amber-400/30">След: #${nextSerialNum}</span>
+              </div>
+              <div class="relative flex items-center justify-center my-1 z-10">
+                <div class="nft-aura-ring"></div>
+                <div class="w-16 h-16 artifact-3d-wrapper">${artSvg}</div>
+              </div>
+              <div class="w-full text-center z-10">
+                <div class="text-xs font-extrabold text-white truncate">${escapeHTML(item.name)}</div>
+                <div class="text-[9px] text-amber-200 font-semibold truncate">${escapeHTML(displayVarTitle)}</div>
+                <div class="text-[8px] text-purple-200/90 truncate">${escapeHTML(displayBgTitle)}</div>
+                <div class="mt-1 py-1 px-2 rounded-lg bg-black/50 border border-white/15 text-[10px] font-bold text-amber-300 hover:bg-white/20 transition">
+                  Выдать NFT • ${priceLabel}
+                </div>
+              </div>
+            </div>
+          `;
+          wrap.onclick = () => window.issueGiftFromCatalog(item);
+          grid.appendChild(wrap);
+        } else {
+          const card = document.createElement('div');
+          card.className = 'gift-card-normal h-56 p-3 flex flex-col items-center justify-between';
+          card.innerHTML = `
+            <div class="w-full flex justify-between items-center">
+              <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-slate-400">#${nextSerialNum}</span>
+              <span class="text-[8px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase">Апгрейд в NFT</span>
+            </div>
+            <div class="w-16 h-16 artifact-3d-wrapper">${artSvg}</div>
+            <div class="w-full text-center">
+              <div class="text-xs font-bold text-white truncate">${escapeHTML(item.name)}</div>
+              <div class="text-[9px] text-slate-400 truncate">Обычный подарок</div>
+              <div class="mt-1.5 py-1 px-2 rounded-lg bg-sky-500/20 border border-sky-400/30 text-[10px] font-bold text-sky-300 hover:bg-sky-500 hover:text-white transition">
+                Подарить • ${priceLabel}
+              </div>
+            </div>
+          `;
+          card.onclick = () => window.issueGiftFromCatalog(item);
+          grid.appendChild(card);
+        }
+      });
+    }
+
+    document.querySelectorAll('.gift-cat-tab').forEach(btn => {
+      btn.onclick = () => {
+        currentGiftFilter = btn.dataset.gfilter;
+        document.querySelectorAll('.gift-cat-tab').forEach(b => {
+          b.className = b === btn
+            ? 'gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#2b5278] text-white transition'
+            : 'gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+        });
+        renderGiftCatalogGrid();
+      };
+    });
+
+    window.openAdminActions = (uid, name) => {
+      window.adminTargetUid = uid;
+      window.adminTargetName = name;
+      const isAdmin = isCreatorUser(currentUserData?.username);
+      document.getElementById('adminActionTitle').textContent = `Студия Артефактов и Подарков: ${name}`;
+      document.getElementById('adminActionSubtitle').textContent = isAdmin
+        ? 'Доступ Создателя Orbit (@white): выбор любых фонов, моделей и выдача бесплатны!'
+        : `Ваш баланс: ${currentUserData?.balance || 0} ORB`;
+      document.getElementById('adminBalanceBox').classList.toggle('hidden', !isAdmin);
+      renderGiftCatalogGrid();
+      document.getElementById('adminActionModal').classList.add('open');
+    };
+
+    window.openGiftShopForActivePartner = () => {
+      if (!activeTarget || activeTarget.kind !== 'dm') return showToast('Подарки вручаются в личных профилях', true);
+      window.openAdminActions(activeTarget.id, activeTarget.title);
+    };
+
+    document.getElementById('sendGiftToPartnerBtn').onclick = () => {
+      if (!activeTarget) return;
+      document.getElementById('partnerProfileModal').classList.remove('open');
+      window.openAdminActions(activeTarget.id, activeTarget.title);
+    };
+
+    document.getElementById('giftMyselfBtn').onclick = () => {
+      if (!currentUserData) return;
+      window.openAdminActions(currentUser.uid, `${currentUserData.name} (Себе)`);
+    };
+
+    window.issueGiftFromCatalog = async (item) => {
+      if (!window.adminTargetUid || !currentUserData) return;
+      const isAdmin = isCreatorUser(currentUserData.username);
+      const cost = isAdmin ? 0 : item.price;
+
+      if (!isAdmin && (currentUserData.balance || 0) < cost) {
+        return showToast(`Недостаточно средств! Требуется ${cost} ORB`, true);
+      }
+
+      const comment = document.getElementById('giftCommentInput').value.trim();
+      const selectedBgName = document.getElementById('nftBgSelect').value;
+      const selectedVarIdx = document.getElementById('nftVariantSelect').value;
+      const selectedPatternName = document.getElementById('nftPatternSelect').value;
+
+      const baseCol = BASE_COLLECTIONS.find(c => c.baseId === item.baseId) || BASE_COLLECTIONS[0];
+
+      let chosenVariant = baseCol.variants[0];
+      if (item.type === 'nft') {
+        if (selectedVarIdx === 'random') {
+          chosenVariant = baseCol.variants[Math.floor(Math.random() * baseCol.variants.length)];
+        } else {
+          const idx = parseInt(selectedVarIdx, 10) || 0;
+          chosenVariant = baseCol.variants[idx % baseCol.variants.length];
+        }
+      }
+
+      let chosenBackdrop = NFT_BACKDROPS[Math.floor(Math.random() * NFT_BACKDROPS.length)];
+      if (selectedBgName !== 'random') {
+        const foundBg = NFT_BACKDROPS.find(b => b.name === selectedBgName);
+        if (foundBg) chosenBackdrop = foundBg;
+      }
+
+      let chosenPattern = NFT_PATTERNS[Math.floor(Math.random() * NFT_PATTERNS.length)];
+      if (selectedPatternName !== 'random') {
+        const foundPat = NFT_PATTERNS.find(p => p.name === selectedPatternName);
+        if (foundPat) chosenPattern = foundPat;
+      }
+
+      try {
+        const counterKey = item.baseId || item.id || 'custom_gift';
+        const exactSerial = await allocateNextGiftSerial(counterKey);
+
+        const giftObj = {
+          id: 'g_' + Date.now() + '_' + exactSerial,
+          baseId: item.baseId || 'pepe',
+          catalogId: item.id || 'custom_gift',
+          type: item.type,
+          name: item.name,
+          model: item.model || baseCol.model || 'pepe',
+          colors: item.type === 'nft' ? chosenVariant.colors : baseCol.variants[0].colors,
+          variantName: item.type === 'nft' ? chosenVariant.name : 'Base Edition',
+          variantChance: item.type === 'nft' ? chosenVariant.chance : '100%',
+          accessory: item.type === 'nft' ? chosenVariant.accessory : null,
+          customImage: item.customImage || null,
+          price: item.price,
+          upgradeCost: item.upgradeCost || 250,
+          rarity: chosenBackdrop.rarity,
+          bgName: chosenBackdrop.name,
+          gradient: chosenBackdrop.gradient,
+          patternName: chosenPattern.name,
+          patternChance: chosenPattern.chance,
+          serial: exactSerial,
+          comment: comment,
+          hidden: false,
+          from: currentUserData.username || 'white',
+          date: new Date().toISOString()
+        };
+
+        if (!isAdmin && cost > 0) {
+          await setDoc(doc(db, "users", currentUser.uid), { balance: increment(-cost) }, { merge: true });
+        }
+        await setDoc(doc(db, "users", window.adminTargetUid), { gifts: arrayUnion(giftObj) }, { merge: true });
+
+        if (window.adminTargetUid !== currentUser.uid) {
+          const chatId = currentUser.uid < window.adminTargetUid ? `${currentUser.uid}_${window.adminTargetUid}` : `${window.adminTargetUid}_${currentUser.uid}`;
+          await addDoc(collection(db, "chats", chatId, "messages"), {
+            text: `${item.type === 'nft' ? `Выпущен коллекционный NFT «${item.name}» (${chosenVariant.name}, фон ${chosenBackdrop.name})` : `Вручен подарок «${item.name}» (доступен апгрейд в NFT)`} #${exactSerial}${comment ? ` — "${comment}"` : ''}`,
+            senderId: currentUser.uid,
+            senderName: currentUserData.name,
+            senderUsername: currentUserData.username,
+            createdAt: serverTimestamp()
+          });
+        }
+
+        document.getElementById('giftCommentInput').value = '';
+        document.getElementById('adminActionModal').classList.remove('open');
+        window.playPopSound('send');
+        showToast(`${item.name} #${exactSerial} успешно вручен!`);
+      } catch (e) {
+        showToast('Ошибка выпуска: ' + e.message, true);
+      }
+    };
+
+    window.sendCustomGift = async () => {
+      const type = document.getElementById('customGiftType').value;
+      const name = document.getElementById('customGiftName').value.trim();
+      const url = document.getElementById('customGiftUrl').value.trim();
+      if (!name) return showToast('Введите название артефакта', true);
+
+      const slugId = 'custom_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      await window.issueGiftFromCatalog({
+        id: slugId,
+        baseId: 'genesis_crown',
+        type,
+        name,
+        customImage: url || null,
+        model: 'crown',
+        price: 500,
+        upgradeCost: 250
+      });
+    };
+
+    window.adminProcessBalance = async () => {
+      const amount = parseInt(document.getElementById('adminAddBalanceInput').value, 10);
+      if (!amount || !window.adminTargetUid) return showToast('Введите сумму ORB', true);
+      try {
+        await setDoc(doc(db, "users", window.adminTargetUid), { balance: increment(amount) }, { merge: true });
+        showToast(`Начислено ${amount} ORB`);
+        document.getElementById('adminAddBalanceInput').value = '';
+      } catch(e) { showToast('Ошибка', true); }
+    };
+
+    // Админ-панель
+    document.getElementById('adminPanelBtn').onclick = () => {
+      document.getElementById('adminPanel').classList.add('open');
+      renderAdminData();
+    };
+    document.getElementById('closeAdminBtn').onclick = () => document.getElementById('adminPanel').classList.remove('open');
+
+    document.getElementById('tabAdminUsers').onclick = () => {
+      document.getElementById('tabAdminUsers').classList.replace('text-slate-400', 'text-rose-400');
+      document.getElementById('tabAdminUsers').classList.add('bg-rose-500/20');
+      document.getElementById('tabAdminRooms').classList.remove('bg-rose-500/20', 'text-rose-400');
+      document.getElementById('tabAdminRooms').classList.add('text-slate-400');
+      document.getElementById('adminUsersList').classList.remove('hidden');
+      document.getElementById('adminRoomsList').classList.add('hidden');
+    };
+
+    document.getElementById('tabAdminRooms').onclick = () => {
+      document.getElementById('tabAdminRooms').classList.replace('text-slate-400', 'text-rose-400');
+      document.getElementById('tabAdminRooms').classList.add('bg-rose-500/20');
+      document.getElementById('tabAdminUsers').classList.remove('bg-rose-500/20', 'text-rose-400');
+      document.getElementById('tabAdminUsers').classList.add('text-slate-400');
+      document.getElementById('adminRoomsList').classList.remove('hidden');
+      document.getElementById('adminUsersList').classList.add('hidden');
+    };
+
+    window.adminDeleteUser = async (uid) => {
+      if (confirm('Удалить профиль пользователя из БД?')) {
+        await deleteDoc(doc(db, "users", uid));
+        showToast('Пользователь удален');
+      }
+    };
+    window.adminDeleteRoom = async (roomId) => {
+      if (confirm('Удалить канал/чат из сети?')) {
+        await deleteDoc(doc(db, "rooms", roomId));
+        showToast('Комната удалена');
+      }
+    };
+
+    function renderAdminData() {
+      const uList = document.getElementById('adminUsersList');
+      const rList = document.getElementById('adminRoomsList');
+      uList.innerHTML = ''; rList.innerHTML = '';
+
+      const allWithMe = [
+        ...(currentUserData ? [{
+          id: currentUser.uid,
+          numericId: currentUserData.numericId,
+          title: currentUserData.name + ' (Вы)',
+          username: currentUserData.username,
+          avatar: currentUserData.avatar,
+          balance: currentUserData.balance || 0,
+          gifts: currentUserData.gifts || [],
+          createdAt: currentUserData.createdAt
+        }] : []),
+        ...allUsersCache
+      ].sort((a, b) => parseInt(a.numericId || '999999', 10) - parseInt(b.numericId || '999999', 10));
+
+      allWithMe.forEach(u => {
+        const div = document.createElement('div');
+        const fId = String(u.numericId || '000001').padStart(6, '0');
+        const safeTitle = escapeHTML(u.title);
+        const badge = isCreatorUser(u.username) ? getCreatorBadgeHTML() : '';
+        div.className = "flex flex-wrap items-center justify-between gap-3 bg-black/30 p-3.5 rounded-2xl border border-white/10";
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <img src="${escapeHTML(u.avatar)}" class="w-10 h-10 rounded-full object-cover" />
+            <div>
+              <div class="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
+                <span>${safeTitle}</span>
+                ${badge}
+                <span class="text-sky-400 text-xs font-mono">@${escapeHTML(u.username)}</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-400/20">ID ${fId}</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">
+                Баланс: <b class="text-emerald-400">${u.balance || 0} ORB</b> • Артефактов: <b class="text-purple-400">${(u.gifts || []).length}</b> • Рег: ${formatRegDate(u.createdAt)}
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" class="admin-gift-btn px-3.5 py-1.5 bg-purple-500/25 text-purple-300 border border-purple-500/40 rounded-xl hover:bg-purple-500 hover:text-white transition text-xs font-semibold">
+              Конструктор NFT / ORB
+            </button>
+            ${u.id !== currentUser?.uid ? `<button type="button" class="admin-del-btn px-3 py-1.5 bg-rose-500/20 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition text-xs">Удалить</button>` : ''}
+          </div>
+        `;
+        div.querySelector('.admin-gift-btn').onclick = () => window.openAdminActions(u.id, u.title);
+        const delBtn = div.querySelector('.admin-del-btn');
+        if (delBtn) delBtn.onclick = () => window.adminDeleteUser(u.id);
+        uList.appendChild(div);
+      });
+
+      allRoomsCache.forEach(r => {
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between bg-black/30 p-3.5 rounded-2xl border border-white/10";
+        div.innerHTML = `
+          <div><div class="text-sm font-bold text-white">${escapeHTML(r.title)} <span class="text-purple-400 text-xs uppercase ml-1">${escapeHTML(r.kind)}</span></div><div class="text-[10px] text-slate-500">Тег: @${escapeHTML(r.username)} | Рег: ${formatRegDate(r.createdAt)}</div></div>
+          <button type="button" class="px-3 py-1.5 bg-rose-500/20 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition text-xs">Удалить</button>
+        `;
+        div.querySelector('button').onclick = () => window.adminDeleteRoom(r.id);
+        rList.appendChild(div);
+      });
+    }
+
+    // --- СОЗДАНИЕ КОМНАТ ---
+    let crType = 'group';
+    document.getElementById('openCreateRoomBtn').onclick = () => document.getElementById('createRoomModal').classList.add('open');
+    document.getElementById('closeCreateRoomBtn').onclick = () => document.getElementById('createRoomModal').classList.remove('open');
+    document.getElementById('typeGroupBtn').onclick = () => { crType = 'group'; document.getElementById('typeGroupBtn').classList.add('bg-[#2b5278]', 'text-white'); document.getElementById('typeGroupBtn').classList.remove('text-slate-400'); document.getElementById('typeChannelBtn').classList.remove('bg-[#2b5278]', 'text-white'); document.getElementById('typeChannelBtn').classList.add('text-slate-400'); };
+    document.getElementById('typeChannelBtn').onclick = () => { crType = 'channel'; document.getElementById('typeChannelBtn').classList.add('bg-[#2b5278]', 'text-white'); document.getElementById('typeChannelBtn').classList.remove('text-slate-400'); document.getElementById('typeGroupBtn').classList.remove('bg-[#2b5278]', 'text-white'); document.getElementById('typeGroupBtn').classList.add('text-slate-400'); };
+
+    document.getElementById('createRoomForm').onsubmit = async e => {
+      e.preventDefault();
+      const t = document.getElementById('roomTitleInput').value.trim(), h = document.getElementById('roomHandleInput').value.trim().toLowerCase(), b = document.getElementById('roomBioInput').value.trim();
+      if (!USERNAME_REGEX.test(h)) return showToast('Тег: 4-16 a-z, 1-9, _', true);
+      try {
+        const ref = await addDoc(collection(db, "rooms"), { type: crType, title: t, username: h, bio: b, avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${h}`, ownerId: currentUser.uid, ownerName: currentUserData.name, createdAt: serverTimestamp() });
+        document.getElementById('createRoomForm').reset();
+        document.getElementById('createRoomModal').classList.remove('open');
+        showToast('Создано!');
+        openTarget({ kind: crType, id: ref.id, title: t, username: h, bio: b, avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${h}`, ownerId: currentUser.uid });
+      } catch(err) { showToast('Ошибка', true); }
+    };
+
+    // --- СПИСКИ И ФИЛЬТРЫ ---
+    document.querySelectorAll('.filter-tab').forEach(b => b.onclick = () => {
+      currentFilter = b.dataset.filter;
+      document.querySelectorAll('.filter-tab').forEach(x => x.className = x === b ? 'filter-tab flex-1 py-1.5 rounded-xl bg-white/10 text-white transition' : 'filter-tab flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition');
+      renderSidebarList();
+    });
+
+    function subscribeSidebarData() {
+      onSnapshot(doc(db, "system", "gift_counters"), snap => {
+        giftCountersCache = snap.exists() ? snap.data() : {};
+        if (document.getElementById('adminActionModal').classList.contains('open')) {
+          renderGiftCatalogGrid();
+        }
+      });
+
+      onSnapshot(collection(db, "users"), snap => {
+        allUsersCache = [];
+        snap.forEach(d => {
+          const u = d.data();
+          if (u.uid !== currentUser.uid) {
+            const partnerObj = {
+              kind: 'dm',
+              id: u.uid,
+              numericId: String(u.numericId || '000001').padStart(6, '0'),
+              title: u.name,
+              username: u.username,
+              bio: u.bio,
+              avatar: u.avatar,
+              email: u.email,
+              balance: u.balance || 0,
+              gifts: u.gifts || [],
+              createdAt: u.createdAt
+            };
+            allUsersCache.push(partnerObj);
+
+            if (activeTarget && activeTarget.id === u.uid && activeTarget.kind === 'dm') {
+              activeTarget = partnerObj;
+              if (document.getElementById('partnerProfileModal').classList.contains('open')) {
+                document.getElementById('modalPartnerBalance').textContent = `${partnerObj.balance || 0} ORB`;
+                renderGifts(partnerObj.gifts, 'modalPartnerGiftsContainer', 'modalPartnerGiftsSection', 'modalPartnerGiftsCount', partnerObj.title, false);
+              }
+            }
+          } else {
+            Object.assign(currentUserData, u);
+            updateMyUI();
+          }
+        });
+        allUsersCache.sort((a, b) => parseInt(a.numericId, 10) - parseInt(b.numericId, 10));
+        renderSidebarList();
+        if (document.getElementById('adminPanel').classList.contains('open')) renderAdminData();
+      });
+
+      onSnapshot(collection(db, "rooms"), snap => {
+        allRoomsCache = [];
+        snap.forEach(d => {
+          const r = d.data();
+          allRoomsCache.push({ kind: r.type, id: d.id, title: r.title, username: r.username, bio: r.bio, avatar: r.avatar, ownerId: r.ownerId, createdAt: r.createdAt });
+        });
+        renderSidebarList();
+        if (document.getElementById('adminPanel').classList.contains('open')) renderAdminData();
+      });
+    }
+
+    function renderSidebarList() {
+      const list = document.getElementById('chatsList'), sv = document.getElementById('searchInput').value.toLowerCase();
+      list.innerHTML = '';
+      const comb = [...allRoomsCache, ...allUsersCache].filter(i => (currentFilter === 'all' || i.kind === currentFilter) && (i.title?.toLowerCase().includes(sv) || i.username?.toLowerCase().includes(sv) || i.numericId?.includes(sv)));
+
+      comb.forEach(i => {
+        const div = document.createElement('div');
+        div.className = `chat-item flex items-center gap-3 ${activeTarget?.id === i.id ? 'active' : ''}`;
+        let b = '';
+        if (i.kind === 'channel') b = `<span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">КАНАЛ</span>`;
+        else if (i.kind === 'group') b = `<span class="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-semibold">ГРУППА</span>`;
+        else b = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-slate-400">ID ${i.numericId || '000001'}</span>`;
+
+        const creatorTag = (i.kind === 'dm' && isCreatorUser(i.username)) ? getCreatorBadgeHTML() : '';
+        const publicGiftsCount = (i.gifts || []).filter(g => !g.hidden).length;
+        const giftCountBadge = publicGiftsCount > 0 ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">NFT ${publicGiftsCount}</span>` : '';
+
+        div.innerHTML = `
+          <div class="relative flex-shrink-0">
+            <img src="${escapeHTML(i.avatar)}" class="w-11 h-11 rounded-full object-cover"/>
+            ${i.kind === 'dm' ? '<span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0b1322]"></span>' : ''}
+          </div>
+          <div class="flex-1 overflow-hidden">
+            <div class="flex justify-between items-center gap-1">
+              <div class="flex items-center gap-1.5 overflow-hidden flex-wrap">
+                ${b}
+                <h4 class="text-sm font-semibold text-white truncate">${escapeHTML(i.title)}</h4>
+                ${creatorTag}
+              </div>
+              ${giftCountBadge}
+            </div>
+            <p class="text-xs text-slate-400 truncate mt-0.5">${escapeHTML(i.bio || 'Открыть диалог')}</p>
+          </div>
+        `;
+        div.onclick = () => openTarget(i);
+        list.appendChild(div);
+        if (activeTarget?.id === i.id) { activeTarget = i; updateChatHeader(i); }
+      });
+    }
+    document.getElementById('searchInput').oninput = renderSidebarList;
+
+    function updateChatHeader(t) {
+      document.getElementById('chatPartnerName').textContent = t.title;
+      document.getElementById('chatPartnerUsernameBadge').textContent = t.username ? `@${t.username}` : '';
+      document.getElementById('chatPartnerBioPreview').textContent = t.kind === 'dm' ? `ID: ${t.numericId || '000001'} • Рег: ${formatRegDate(t.createdAt)}` : (t.bio || 'Пространство Orbit');
+      document.getElementById('chatPartnerAvatar').src = t.avatar;
+      document.getElementById('chatOnlineDot').classList.toggle('hidden', t.kind !== 'dm');
+      document.getElementById('headerQuickGiftBtn').classList.toggle('hidden', t.kind !== 'dm');
+      document.getElementById('chatPartnerCreatorBadge').classList.toggle('hidden', !(t.kind === 'dm' && isCreatorUser(t.username)));
+
+      const b = document.getElementById('chatPartnerTypeBadge');
+      if (t.kind !== 'dm') { b.classList.remove('hidden'); b.textContent = t.kind === 'channel' ? 'Канал' : 'Группа'; }
+      else b.classList.add('hidden');
+
+      const mf = document.getElementById('messageForm'), rb = document.getElementById('channelReadonlyBar');
+      if (t.kind === 'channel' && t.ownerId !== currentUser.uid) { mf.classList.add('hidden'); rb.classList.remove('hidden'); }
+      else { mf.classList.remove('hidden'); rb.classList.add('hidden'); }
+    }
+
+    // --- МОДАЛКА ПРОФИЛЯ ПАРТНЕРА ---
+    document.getElementById('chatHeaderBar').onclick = () => {
+      if (!activeTarget) return;
+      document.getElementById('modalPartnerAvatar').src = activeTarget.avatar;
+      document.getElementById('modalPartnerFullName').textContent = activeTarget.title;
+      document.getElementById('modalPartnerCreatorBadge').classList.toggle('hidden', !(activeTarget.kind === 'dm' && isCreatorUser(activeTarget.username)));
+      document.getElementById('modalPartnerUsername').textContent = activeTarget.username ? `@${activeTarget.username}` : '';
+      document.getElementById('modalPartnerBio').textContent = activeTarget.bio || 'Описание отсутствует';
+
+      document.getElementById('modalExtraLabel').textContent = activeTarget.kind === 'dm' ? 'Почта узла' : 'Тип';
+      document.getElementById('modalPartnerEmail').textContent = activeTarget.kind === 'dm' ? (activeTarget.email || 'Скрыто') : (activeTarget.kind === 'channel' ? 'Канал' : 'Группа');
+      document.getElementById('modalPartnerBalance').textContent = `${activeTarget.balance || 0} ORB`;
+
+      document.getElementById('modalPartnerUid').textContent = activeTarget.kind === 'dm' ? String(activeTarget.numericId || '000001').padStart(6, '0') : activeTarget.id.substring(0, 10);
+      document.getElementById('modalPartnerRegDate').textContent = formatRegDate(activeTarget.createdAt);
+
+      document.getElementById('sendGiftToPartnerBtn').classList.toggle('hidden', activeTarget.kind !== 'dm');
+
+      if (activeTarget.kind === 'dm') {
+        renderGifts(activeTarget.gifts, 'modalPartnerGiftsContainer', 'modalPartnerGiftsSection', 'modalPartnerGiftsCount', activeTarget.title, false);
+      } else {
+        document.getElementById('modalPartnerGiftsSection').classList.add('hidden');
+      }
+
+      document.getElementById('partnerProfileModal').classList.add('open');
+    };
+
+    document.getElementById('closePartnerModalBtn').onclick = () => {
+      document.getElementById('partnerProfileModal').classList.remove('open');
+    };
+
+    // --- УДАЛЕНИЕ СООБЩЕНИЙ ---
+    window.deleteMessage = async (docId) => {
+      if (!activeTarget) return;
+      if (confirm('Удалить сообщение для всех?')) {
+        const ref = activeTarget.kind === 'dm' ? collection(db, "chats", currentUser.uid < activeTarget.id ? `${currentUser.uid}_${activeTarget.id}` : `${activeTarget.id}_${currentUser.uid}`, "messages") : collection(db, "rooms", activeTarget.id, "messages");
+        await deleteDoc(doc(ref, docId));
+      }
+    };
+
+    function openTarget(target) {
+      activeTarget = target;
+      renderSidebarList();
+      document.getElementById('chatPlaceholder').classList.add('hidden');
+      document.getElementById('activeChat').classList.remove('hidden');
+      document.getElementById('activeChat').classList.add('flex');
+      updateChatHeader(target);
+
+      if (unsubscribeMessages) unsubscribeMessages();
+      const area = document.getElementById('messagesArea');
+      area.innerHTML = '';
+      const mRef = target.kind === 'dm' ? collection(db, "chats", currentUser.uid < target.id ? `${currentUser.uid}_${target.id}` : `${target.id}_${currentUser.uid}`, "messages") : collection(db, "rooms", target.id, "messages");
+      let init = true;
+
+      unsubscribeMessages = onSnapshot(query(mRef, orderBy("createdAt", "asc")), snap => {
+        snap.docChanges().forEach(change => {
+          const docId = change.doc.id, d = change.doc.data(), isMine = d.senderId === currentUser.uid;
+
+          if (change.type === 'removed') { const el = document.getElementById(`msg-${docId}`); if (el) el.remove(); return; }
+          if (change.type === 'added') {
+            if (document.getElementById(`msg-${docId}`)) return;
+            const row = document.createElement('div'); row.id = `msg-${docId}`; row.className = `msg-row ${!init ? 'animate-in' : ''}`;
+            const bbl = document.createElement('div'); bbl.className = `msg-bubble flex flex-col gap-1 ${isMine ? 'msg-sent' : 'msg-received'}`;
+
+            if (!isMine && target.kind !== 'dm') {
+              const senderBadge = isCreatorUser(d.senderUsername) ? ` ${getCreatorBadgeHTML()}` : '';
+              bbl.innerHTML += `<div class="text-[11px] font-bold text-sky-400 flex items-center gap-1.5">${escapeHTML(target.kind === 'channel' ? target.title : d.senderName)}${senderBadge}</div>`;
+            }
+
+            if (d.fileData && d.fileType?.startsWith('image/')) bbl.innerHTML += `<img src="${escapeHTML(d.fileData)}" class="rounded-xl max-h-56 object-contain cursor-pointer mx-auto" onclick="window.openLightbox('${escapeHTML(d.fileData)}')"/>`;
+            else if (d.fileData && d.fileType?.startsWith('video/')) bbl.innerHTML += `<video src="${escapeHTML(d.fileData)}" controls class="circle-video"></video>`;
+            else if (d.fileData && d.fileType?.startsWith('audio/')) bbl.innerHTML += `<audio src="${escapeHTML(d.fileData)}" controls></audio>`;
+            else if (d.fileData) bbl.innerHTML += `<a href="${escapeHTML(d.fileData)}" download="${escapeHTML(d.fileName || 'file')}" class="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-white font-mono text-xs">${escapeHTML(d.fileName || 'Скачать файл')}</a>`;
+
+            const time = d.createdAt ? new Date(d.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            bbl.innerHTML += `<div class="flex justify-between items-end gap-3 mt-1"><span>${escapeHTML(d.text || '')}</span><span class="msg-time text-[10px] text-white/50">${time}</span></div>`;
+
+            if (isMine) {
+              const delBtn = document.createElement('button'); delBtn.className = 'delete-msg-btn text-rose-400 hover:text-rose-500'; delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
+              delBtn.onclick = () => window.deleteMessage(docId);
+              row.appendChild(delBtn);
+            }
+            if (isMine) { row.insertBefore(bbl, row.firstChild); } else { row.appendChild(bbl); }
+            area.appendChild(row);
+            if (!init && !isMine) window.playPopSound('receive');
+          }
+        });
+        area.scrollTop = area.scrollHeight;
+        init = false;
+      });
+    }
+
+    // --- ВВОД ТЕКСТА И МЕДИА ---
+    const msgInput = document.getElementById('msgInput');
+    msgInput.addEventListener('input', function() { this.style.height = '44px'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; toggleMediaButtons(); });
+    document.getElementById('toggleEnterSend').onchange = () => msgInput.focus();
+    msgInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && document.getElementById('toggleEnterSend').checked) { e.preventDefault(); document.getElementById('messageForm').dispatchEvent(new Event('submit')); } });
+
+    function toggleMediaButtons() {
+      const v = msgInput.value.trim();
+      document.getElementById('sendMsgBtn').style.display = v ? 'flex' : 'none';
+      document.getElementById('recAudioBtn').style.display = v ? 'none' : 'block';
+      document.getElementById('recVideoBtn').style.display = v ? 'none' : 'block';
+    }
+
+    async function startRecording(type) {
+      if (!activeTarget) return;
+      try {
+        isRecording = true;
+        const constraints = type === 'video' ? { audio: true, video: { width: 240, height: 240, frameRate: 15, facingMode: "user" } } : { audio: true };
+        recStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        if (type === 'video') {
+          const pv = document.getElementById('liveVideoPreview');
+          pv.srcObject = recStream; pv.classList.remove('hidden'); setTimeout(() => pv.classList.add('recording'), 50);
+        }
+
+        mediaRecorder = new MediaRecorder(recStream, { mimeType: type === 'video' ? 'video/webm' : 'audio/webm' });
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+          recStream.getTracks().forEach(t => t.stop()); document.getElementById('liveVideoPreview').classList.remove('recording'); setTimeout(() => document.getElementById('liveVideoPreview').classList.add('hidden'), 300);
+          clearInterval(recTimer);
+          if (recChunks.length > 0 && isRecording) {
+            const blob = new Blob(recChunks, { type: type === 'video' ? 'video/webm' : 'audio/webm' });
+            if (blob.size > 950000) showToast("Запись превысила лимит 1 МБ", true);
+            else {
+              const base64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+              sendFinalMessage(null, { fileName: type === 'video' ? 'Video.webm' : 'Audio.webm', fileSize: formatBytes(blob.size), fileType: blob.type, fileData: base64 });
+            }
+          }
+          resetRecordingUI();
+        };
+
+        document.getElementById('messageForm').classList.add('hidden'); document.getElementById('recordingBar').classList.remove('hidden'); document.getElementById('recordingBar').classList.add('flex');
+        document.getElementById('recordingTypeLabel').textContent = type === 'video' ? 'Видеозапись...' : 'Голосовое...';
+        recSeconds = 0; document.getElementById('recordingTimer').textContent = "00:00";
+        recTimer = setInterval(() => {
+          recSeconds++; const m = String(Math.floor(recSeconds / 60)).padStart(2, '0'), s = String(recSeconds % 60).padStart(2, '0'); document.getElementById('recordingTimer').textContent = `${m}:${s}`;
+          if (type === 'video' && recSeconds >= 12) mediaRecorder.stop();
+          if (type === 'audio' && recSeconds >= 60) mediaRecorder.stop();
+        }, 1000);
+        recChunks = []; mediaRecorder.start();
+      } catch(e) { showToast("Нет доступа к камере/микрофону", true); resetRecordingUI(); }
+    }
+
+    function resetRecordingUI() {
+      isRecording = false; clearInterval(recTimer); document.getElementById('recordingBar').classList.add('hidden'); document.getElementById('recordingBar').classList.remove('flex'); document.getElementById('messageForm').classList.remove('hidden'); document.getElementById('messageForm').classList.add('flex');
+    }
+
+    document.getElementById('recAudioBtn').onclick = () => startRecording('audio');
+    document.getElementById('recVideoBtn').onclick = () => startRecording('video');
+    document.getElementById('cancelRecBtn').onclick = () => { isRecording = false; if (mediaRecorder?.state === 'recording') mediaRecorder.stop(); };
+    document.getElementById('sendRecBtn').onclick = () => { if (mediaRecorder?.state === 'recording') mediaRecorder.stop(); };
+
+    // --- ФАЙЛЫ И ОТПРАВКА ---
+    document.getElementById('attachBtn').onclick = () => document.getElementById('chatFileInput').click();
+    function formatBytes(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'; return (b / 1048576).toFixed(1) + ' MB'; }
+
+    function compressImageToDataURL(file, maxSide = 720, quality = 0.78) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxSide || h > maxSide) {
+              if (w > h) { h = Math.round(h * (maxSide / w)); w = maxSide; }
+              else { w = Math.round(w * (maxSide / h)); h = maxSide; }
+            }
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(c.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = reject; img.src = e.target.result;
+        };
+        reader.onerror = reject; reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('chatFileInput').onchange = async e => {
+      const f = e.target.files[0]; if (!f) return;
+      if (f.type.startsWith('image/')) { const cmp = await compressImageToDataURL(f, 800, 0.8); pendingAttachment = { fileName: f.name, fileSize: formatBytes(f.size), fileType: f.type, fileData: cmp }; document.getElementById('attachThumbBox').innerHTML = `<img src="${cmp}" class="w-full h-full object-cover" />`; }
+      else { if (f.size > 750 * 1024) return showToast('Максимум 750 КБ', true); const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); }); pendingAttachment = { fileName: f.name, fileSize: formatBytes(f.size), fileType: f.type || 'application/octet-stream', fileData: b64 }; document.getElementById('attachThumbBox').innerHTML = `<span class="text-xs font-bold text-sky-400">FILE</span>`; }
+      document.getElementById('attachFileName').textContent = pendingAttachment.fileName; document.getElementById('attachFileSize').textContent = pendingAttachment.fileSize; document.getElementById('attachmentPreviewBar').classList.remove('hidden'); document.getElementById('attachmentPreviewBar').classList.add('flex');
+    };
+    document.getElementById('cancelAttachmentBtn').onclick = () => { pendingAttachment = null; document.getElementById('chatFileInput').value = ''; document.getElementById('attachmentPreviewBar').classList.add('hidden'); document.getElementById('attachmentPreviewBar').classList.remove('flex'); };
+
+    document.getElementById('messageForm').onsubmit = async e => {
+      e.preventDefault(); const t = msgInput.value.trim(); if ((!t && !pendingAttachment) || !activeTarget) return;
+      const att = pendingAttachment; msgInput.value = ''; msgInput.style.height = '44px'; toggleMediaButtons(); pendingAttachment = null; document.getElementById('chatFileInput').value = ''; document.getElementById('attachmentPreviewBar').classList.add('hidden'); document.getElementById('attachmentPreviewBar').classList.remove('flex');
+      sendFinalMessage(t, att);
+    };
+
+    async function sendFinalMessage(text, att) {
+      if (!activeTarget) return; window.playPopSound('send');
+      const mRef = activeTarget.kind === 'dm' ? collection(db, "chats", currentUser.uid < activeTarget.id ? `${currentUser.uid}_${activeTarget.id}` : `${activeTarget.id}_${currentUser.uid}`, "messages") : collection(db, "rooms", activeTarget.id, "messages");
+      await addDoc(mRef, {
+        text: text || null,
+        senderId: currentUser.uid,
+        senderName: currentUserData.name,
+        senderUsername: currentUserData.username,
+        fileName: att?.fileName || null,
+        fileSize: att?.fileSize || null,
+        fileType: att?.fileType || null,
+        fileData: att?.fileData || null,
+        createdAt: serverTimestamp()
+      });
+    }
+  </script>
+</body>
+</html>
