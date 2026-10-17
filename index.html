@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Orbit OS — Мессенджер нового поколения</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -20,6 +20,7 @@
       margin: 0;
       padding: 0;
       font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .font-mono {
@@ -35,6 +36,7 @@
       color: #ffffff;
       overflow: hidden;
       height: 100vh;
+      height: 100dvh;
       width: 100vw;
       user-select: none;
     }
@@ -90,7 +92,7 @@
 
     /* Уникальный дизайн парящих стеклянных капсул Orbit OS */
     .orbit-dock {
-      background: rgba(11, 18, 31, 0.72);
+      background: rgba(11, 18, 31, 0.76);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -100,14 +102,14 @@
     }
 
     .orbit-input {
-      background: rgba(5, 10, 20, 0.55);
+      background: rgba(5, 10, 20, 0.6);
       border: 1px solid rgba(255, 255, 255, 0.09);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       color: #ffffff;
     }
 
     .orbit-input:focus {
-      background: rgba(15, 25, 45, 0.75);
+      background: rgba(15, 25, 45, 0.85);
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18), 0 0 20px rgba(56, 189, 248, 0.12);
       outline: none;
@@ -134,10 +136,11 @@
       position: relative;
       z-index: 20;
       height: 100vh;
+      height: 100dvh;
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 1.25rem;
+      padding: 1rem;
       opacity: 0;
       transform: translateY(24px) scale(0.96);
       transition: opacity 0.55s ease, transform 0.55s ease;
@@ -152,6 +155,7 @@
       position: relative;
       z-index: 30;
       height: 100vh;
+      height: 100dvh;
       width: 100vw;
       padding: 14px;
       gap: 14px;
@@ -202,12 +206,13 @@
     .msg-row { display: flex; width: 100%; margin-bottom: 10px; position: relative; }
     .msg-row.animate-in { animation: msgSlideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
     .msg-bubble {
-      max-width: 68%;
+      max-width: 75%;
       padding: 10px 14px;
       border-radius: var(--msg-radius);
       font-size: var(--msg-size);
       line-height: 1.45;
       word-wrap: break-word;
+      overflow-wrap: anywhere;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
     }
     .msg-sent {
@@ -274,9 +279,9 @@
     .delete-msg-btn { opacity: 0; transition: opacity 0.2s; margin: 0 8px; align-self: flex-end; padding-bottom: 4px; }
     .msg-row:hover .delete-msg-btn { opacity: 1; }
 
-    audio { height: 36px; max-width: 240px; border-radius: 20px; outline: none; }
-    video.circle-video { width: 220px; height: 220px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); background: #000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-    #liveVideoPreview { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 3px solid #f43f5e; position: absolute; bottom: 80px; right: 20px; z-index: 40; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    audio { height: 36px; max-width: 220px; border-radius: 20px; outline: none; }
+    video.circle-video { width: 200px; height: 200px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); background: #000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    #liveVideoPreview { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 3px solid #f43f5e; position: absolute; bottom: 80px; right: 20px; z-index: 40; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     #liveVideoPreview.recording { transform: scale(1); }
 
     /* ==========================================================
@@ -386,7 +391,6 @@
       padding: 10px 8px 9px;
     }
 
-    /* Скрытый подарок в профиле владельца */
     .gift-hidden-state {
       opacity: 0.48;
       filter: saturate(0.4);
@@ -396,7 +400,6 @@
       filter: saturate(1);
     }
 
-    /* Геометрические паттерны фона NFT */
     .nft-pattern-overlay {
       position: absolute;
       inset: 0;
@@ -409,7 +412,6 @@
       pointer-events: none;
     }
 
-    /* Голографический луч */
     .nft-glare {
       position: absolute;
       inset: -80%;
@@ -423,7 +425,6 @@
       100% { transform: translateX(75%) rotate(25deg); }
     }
 
-    /* Диагональная лента NFT */
     .nft-corner-ribbon {
       position: absolute;
       top: 7px;
@@ -443,6 +444,61 @@
 
     #giftInspectStage { perspective: 1100px; }
     #giftInspectCard3D { transform-style: preserve-3d; transition: transform 0.12s ease-out; }
+
+    /* ==========================================================
+       МОБИЛЬНАЯ АДАПТАЦИЯ (СМАРТФОНЫ И ПЛАНШЕТЫ < 768px)
+       ========================================================== */
+    @media (max-width: 767px) {
+      #messengerContainer {
+        padding: 0 !important;
+        gap: 0 !important;
+      }
+
+      #sidebarDock,
+      #chatSectionDock {
+        width: 100vw !important;
+        height: 100dvh !important;
+        border-radius: 0 !important;
+        border: none !important;
+      }
+
+      /* Когда чат НЕ открыт на телефоне — показываем список чатов, прячем чат */
+      #messengerContainer:not(.mobile-chat-open) #chatSectionDock {
+        display: none !important;
+      }
+
+      /* Когда чат ОТКРЫТ на телефоне — прячем сайдбар, показываем чат */
+      #messengerContainer.mobile-chat-open #sidebarDock {
+        display: none !important;
+      }
+
+      #settingsPanel,
+      #adminPanel {
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        border-radius: 0 !important;
+      }
+
+      .msg-bubble {
+        max-width: 85%;
+      }
+
+      /* На сенсорном экране иконка удаления сообщения видна сразу полупрозрачной */
+      .delete-msg-btn {
+        opacity: 0.55;
+      }
+
+      /* Предотвращение авто-зума iOS/Android при фокусе на инпутах */
+      input, textarea, select {
+        font-size: 16px !important;
+      }
+
+      .orbit-title {
+        letter-spacing: 0.3em;
+        text-indent: 0.3em;
+      }
+    }
   </style>
 </head>
 <body>
@@ -457,28 +513,28 @@
   </div>
 
   <!-- Уведомление -->
-  <div id="toast" class="fixed top-5 right-5 z-[140] px-4 py-3 rounded-2xl bg-[#0f172a]/95 border border-sky-400/35 text-white text-xs font-semibold shadow-2xl flex items-center gap-2.5 opacity-0 pointer-events-none translate-y-[-12px] transition-all duration-300">
-    <span id="toastDot" class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
-    <span id="toastText">Сохранено</span>
+  <div id="toast" class="fixed top-4 right-4 left-4 sm:left-auto z-[140] px-4 py-3 rounded-2xl bg-[#0f172a]/95 border border-sky-400/35 text-white text-xs font-semibold shadow-2xl flex items-center justify-center sm:justify-start gap-2.5 opacity-0 pointer-events-none translate-y-[-12px] transition-all duration-300">
+    <span id="toastDot" class="w-2 h-2 rounded-full bg-sky-400 animate-ping flex-shrink-0"></span>
+    <span id="toastText" class="truncate">Сохранено</span>
   </div>
 
   <!-- Лайтбокс для изображений -->
   <div id="imageLightbox" class="modal-backdrop fixed inset-0 z-[110] bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onclick="closeLightbox()">
-    <img id="lightboxImg" src="" class="modal-card max-w-[90vw] max-h-[88vh] rounded-2xl shadow-2xl object-contain border border-white/10" />
+    <img id="lightboxImg" src="" class="modal-card max-w-[92vw] max-h-[88vh] rounded-2xl shadow-2xl object-contain border border-white/10" />
   </div>
 
   <!-- =========================================================================
        МОДАЛЬНОЕ ОКНО 3D-ОСМОТРА, СКРЫТИЯ, ПЕРЕДАЧИ И РУЛЕТКИ АПГРЕЙДА В NFT
        ========================================================================= -->
-  <div id="giftInspectModal" class="modal-backdrop fixed inset-0 z-[115] bg-black/85 backdrop-blur-lg flex items-center justify-center p-4">
-    <div class="modal-card orbit-dock w-full max-w-md max-h-[92vh] flex flex-col rounded-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.9)] relative">
+  <div id="giftInspectModal" class="modal-backdrop fixed inset-0 z-[115] bg-black/85 backdrop-blur-lg flex items-center justify-center p-3 sm:p-4">
+    <div class="modal-card orbit-dock w-full max-w-md max-h-[92dvh] flex flex-col rounded-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.9)] relative">
       
       <button type="button" id="closeInspectBtn" onclick="window.closeGiftInspect()" class="absolute top-3.5 right-3.5 z-30 w-8 h-8 rounded-full bg-black/40 text-white/80 hover:text-white flex items-center justify-center transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
 
       <!-- Верхняя 3D-сцена подарка / Камера Синтеза NFT -->
-      <div id="giftInspectStage" class="relative h-64 flex-shrink-0 flex flex-col items-center justify-center p-6 overflow-hidden transition-all duration-300">
+      <div id="giftInspectStage" class="relative h-60 sm:h-64 flex-shrink-0 flex flex-col items-center justify-center p-6 overflow-hidden transition-all duration-300">
         <div id="giftInspectBg" class="absolute inset-0 transition-all duration-300"></div>
         <div class="nft-pattern-overlay"></div>
         <div id="giftInspectGlare" class="nft-glare hidden"></div>
@@ -500,9 +556,9 @@
       </div>
 
       <!-- Детали, управление владельца, апгрейд и передача -->
-      <div class="p-5 bg-[#0b1322]/95 border-t border-white/10 space-y-3.5 overflow-y-auto">
+      <div class="p-4 sm:p-5 bg-[#0b1322]/95 border-t border-white/10 space-y-3.5 overflow-y-auto">
         <div class="text-center">
-          <div class="flex items-center justify-center gap-2">
+          <div class="flex items-center justify-center gap-2 flex-wrap">
             <h3 id="giftInspectTitle" class="text-lg font-extrabold text-white"></h3>
             <span id="giftInspectSerial" class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-purple-500/20 text-amber-300 border border-amber-400/30 hidden"></span>
           </div>
@@ -528,18 +584,18 @@
         <div id="ownerGiftControls" class="hidden space-y-2.5">
           <div class="grid grid-cols-2 gap-2.5">
             <button type="button" id="toggleHideGiftBtn" class="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 transition flex items-center justify-center gap-2">
-              <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-sky-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
-              <span id="toggleHideGiftText">Скрыть в профиле</span>
+              <span id="toggleHideGiftText" class="truncate">Скрыть в профиле</span>
             </button>
 
             <button type="button" id="openTransferGiftBtn" class="py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-xs font-semibold text-sky-300 transition flex items-center justify-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
               </svg>
-              <span>Передать подарок</span>
+              <span class="truncate">Передать подарок</span>
             </button>
           </div>
 
@@ -567,29 +623,29 @@
   <!-- =========================================================================
        МОДАЛЬНОЕ ОКНО КАТАЛОГА И КОНСТРУКТОРА ВЫДАЧИ ПОДАРКОВ / ВАЛЮТЫ
        ========================================================================= -->
-  <div id="adminActionModal" class="modal-backdrop fixed inset-0 z-[105] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 md:p-6">
-    <div class="modal-card orbit-dock w-full max-w-5xl max-h-[92vh] rounded-3xl flex flex-col shadow-2xl overflow-hidden">
+  <div id="adminActionModal" class="modal-backdrop fixed inset-0 z-[105] bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6">
+    <div class="modal-card orbit-dock w-full max-w-5xl max-h-[94dvh] rounded-3xl flex flex-col shadow-2xl overflow-hidden">
       
       <!-- Шапка окна выдачи -->
-      <div class="p-4 md:px-6 flex items-center justify-between border-b border-white/10 bg-[#0d1729]">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400">
+      <div class="p-3.5 sm:p-4 md:px-6 flex items-center justify-between border-b border-white/10 bg-[#0d1729]">
+        <div class="flex items-center gap-3 overflow-hidden">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400 flex-shrink-0">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
           </div>
-          <div>
-            <h3 id="adminActionTitle" class="text-base font-bold text-white">Студия Артефактов и Подарков Orbit</h3>
-            <p id="adminActionSubtitle" class="text-[11px] text-sky-400">Выберите фон, 3D-модель и глиф — предпросмотр карточек обновляется мгновенно</p>
+          <div class="overflow-hidden">
+            <h3 id="adminActionTitle" class="text-sm sm:text-base font-bold text-white truncate">Студия Артефактов и Подарков Orbit</h3>
+            <p id="adminActionSubtitle" class="text-[10px] sm:text-[11px] text-sky-400 truncate">Выберите фон, 3D-модель и глиф — предпросмотр обновляется мгновенно</p>
           </div>
         </div>
-        <button type="button" onclick="document.getElementById('adminActionModal').classList.remove('open')" class="w-8 h-8 rounded-full bg-white/5 text-slate-400 hover:text-white flex items-center justify-center">
+        <button type="button" onclick="document.getElementById('adminActionModal').classList.remove('open')" class="w-8 h-8 rounded-full bg-white/5 text-slate-400 hover:text-white flex items-center justify-center flex-shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+      <div class="flex-1 overflow-y-auto p-3.5 sm:p-4 md:p-6 space-y-4 sm:space-y-5">
         
         <!-- Блок начисления валюты ORB (Виден только Создателю @white) -->
-        <div id="adminBalanceBox" class="bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-purple-500/10 p-4 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div id="adminBalanceBox" class="bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-purple-500/10 p-3.5 sm:p-4 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
             <div class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Эмиссия валюты ORB (Доступ Создателя Orbit)</div>
             <div class="text-[11px] text-slate-300 mt-0.5">Мгновенно начислить или списать ORB со счета выбранного узла</div>
@@ -603,12 +659,12 @@
         </div>
 
         <!-- Конструктор параметров выдачи NFT (Скин + Фон + Глиф + Комментарий) -->
-        <div class="p-3.5 rounded-2xl bg-[#070d19]/90 border border-white/10 space-y-3">
+        <div class="p-3 sm:p-3.5 rounded-2xl bg-[#070d19]/90 border border-white/10 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex gap-1.5 p-1 rounded-xl bg-black/40 border border-white/5">
-              <button type="button" data-gfilter="all" class="gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#2b5278] text-white transition">Все (24)</button>
-              <button type="button" data-gfilter="normal" class="gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-sky-300 hover:text-white transition">Обычные под апгрейд (12)</button>
-              <button type="button" data-gfilter="nft" class="gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-purple-300 hover:text-white transition">Коллекционные NFT (12)</button>
+            <div class="flex flex-wrap gap-1 p-1 rounded-xl bg-black/40 border border-white/5 w-full sm:w-auto">
+              <button type="button" data-gfilter="all" class="gift-cat-tab flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-[#2b5278] text-white transition">Все (24)</button>
+              <button type="button" data-gfilter="normal" class="gift-cat-tab flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-sky-300 hover:text-white transition">Обычные (12)</button>
+              <button type="button" data-gfilter="nft" class="gift-cat-tab flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-purple-300 hover:text-white transition">NFT (12)</button>
             </div>
             <span class="text-[11px] text-amber-300 font-medium">Настройте точный вид NFT перед выдачей:</span>
           </div>
@@ -675,7 +731,7 @@
         </div>
 
         <!-- Сетка карточек подарков -->
-        <div id="giftCatalogGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5"></div>
+        <div id="giftCatalogGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
 
         <!-- Свой кастомный подарок по ссылке -->
         <details class="bg-black/25 rounded-2xl border border-white/5 p-3.5">
@@ -722,14 +778,14 @@
   </div>
 
   <!-- Модальное окно профиля партнера -->
-  <div id="partnerProfileModal" class="modal-backdrop fixed inset-0 z-[80] bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="modal-card orbit-dock w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl">
+  <div id="partnerProfileModal" class="modal-backdrop fixed inset-0 z-[80] bg-black/65 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="modal-card orbit-dock w-full max-w-md max-h-[90dvh] flex flex-col rounded-3xl overflow-hidden shadow-2xl">
       <div class="h-24 bg-gradient-to-r from-sky-500/30 via-indigo-500/30 to-purple-500/30 relative flex-shrink-0">
         <button id="closePartnerModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 text-white/80 hover:text-white flex items-center justify-center transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <div class="px-6 pb-6 -mt-12 flex flex-col items-center text-center overflow-y-auto">
+      <div class="px-4 sm:px-6 pb-6 -mt-12 flex flex-col items-center text-center overflow-y-auto">
         <img id="modalPartnerAvatar" src="" class="w-24 h-24 rounded-full object-cover border-4 border-[#0b1322] shadow-lg bg-slate-800 flex-shrink-0" />
         <div class="flex items-center justify-center gap-2 mt-2.5 flex-wrap">
           <h3 id="modalPartnerFullName" class="text-lg font-bold text-white"></h3>
@@ -748,11 +804,11 @@
             <p id="modalPartnerBio" class="text-xs text-slate-200 mt-0.5 leading-relaxed"></p>
           </div>
           <div class="border-t border-white/5 pt-2 flex justify-between items-center">
-            <div>
+            <div class="overflow-hidden pr-2">
               <div id="modalExtraLabel" class="text-[11px] text-slate-400 uppercase tracking-wider">Почта узла</div>
               <p id="modalPartnerEmail" class="text-xs text-slate-300 mt-0.5 truncate"></p>
             </div>
-            <div class="text-right">
+            <div class="text-right flex-shrink-0">
               <div class="text-[11px] text-slate-400 uppercase tracking-wider">Баланс</div>
               <p id="modalPartnerBalance" class="text-xs text-emerald-400 font-bold mt-0.5">0 ORB</p>
             </div>
@@ -774,7 +830,7 @@
               <span class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Публичная коллекция</span>
               <span id="modalPartnerGiftsCount" class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">0</span>
             </div>
-            <div id="modalPartnerGiftsContainer" class="grid grid-cols-3 gap-2.5 pt-1"></div>
+            <div id="modalPartnerGiftsContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1"></div>
           </div>
         </div>
       </div>
@@ -785,22 +841,22 @@
        ЭКРАН АВТОРИЗАЦИИ
        ========================================================================= -->
   <main id="authContainer">
-    <div class="orbit-dock w-full max-w-md rounded-3xl p-7 md:p-8 relative">
-      <div class="flex flex-col items-center mb-6">
-        <div class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-400/25 flex items-center justify-center mb-3 shadow-inner">
-          <svg class="w-8 h-8 text-sky-400 animate-spin" style="animation-duration: 14s;" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor" /><ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" stroke-width="1.5" transform="rotate(-25 12 12)" /><ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.45" transform="rotate(35 12 12)" /></svg>
+    <div class="orbit-dock w-full max-w-md rounded-3xl p-6 sm:p-8 relative max-h-[94dvh] overflow-y-auto">
+      <div class="flex flex-col items-center mb-5">
+        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-sky-500/10 border border-sky-400/25 flex items-center justify-center mb-2.5 shadow-inner">
+          <svg class="w-7 h-7 sm:w-8 sm:h-8 text-sky-400 animate-spin" style="animation-duration: 14s;" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor" /><ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" stroke-width="1.5" transform="rotate(-25 12 12)" /><ellipse cx="12" cy="12" rx="10" ry="4.5" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.45" transform="rotate(35 12 12)" /></svg>
         </div>
         <h2 class="text-xl font-bold text-white">Вход в Orbit OS</h2>
         <p class="text-xs text-slate-400 mt-1">Подключите свой узел к орбитальной сети</p>
       </div>
 
-      <div class="grid grid-cols-2 p-1 rounded-xl bg-black/35 mb-5 border border-white/5">
+      <div class="grid grid-cols-2 p-1 rounded-xl bg-black/35 mb-4 border border-white/5">
         <button id="tabRegister" type="button" class="py-2 text-xs font-semibold rounded-lg bg-[#2b5278] text-white shadow transition">Регистрация</button>
         <button id="tabLogin" type="button" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Вход</button>
       </div>
 
-      <form id="authForm" class="space-y-3.5">
-        <div id="registerExtraFields" class="space-y-3.5">
+      <form id="authForm" class="space-y-3">
+        <div id="registerExtraFields" class="space-y-3">
           <div class="grid grid-cols-2 gap-2.5">
             <input type="text" id="regFirstName" placeholder="Имя" class="orbit-input w-full px-3.5 py-2.5 rounded-xl text-sm" />
             <input type="text" id="regLastName" placeholder="Фамилия" class="orbit-input w-full px-3.5 py-2.5 rounded-xl text-sm" />
@@ -831,29 +887,29 @@
   </main>
 
   <!-- =========================================================================
-       ЭКРАН МЕССЕНДЖЕРА (УНИКАЛЬНЫЙ КОСМИЧЕСКИЙ ИНТЕРФЕЙС ПАРЯЩИХ ДОКОВ)
+       ЭКРАН МЕССЕНДЖЕРА (АДАПТИВНЫЙ ДЛЯ ПК И ТЕЛЕФОНОВ)
        ========================================================================= -->
   <main id="messengerContainer">
 
     <!-- АДМИН-ПАНЕЛЬ (ДЛЯ СОЗДАТЕЛЯ @white) -->
     <div id="adminPanel" class="orbit-dock absolute inset-3.5 rounded-3xl flex flex-col shadow-2xl overflow-hidden">
-      <div class="p-5 flex items-center justify-between border-b border-rose-500/30 bg-[#0d1729]/90">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+      <div class="p-4 sm:p-5 flex items-center justify-between border-b border-rose-500/30 bg-[#0d1729]/90">
+        <div class="flex items-center gap-3 overflow-hidden">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 flex-shrink-0">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
           </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-lg font-bold text-white">Центр Создателя Orbit</h2>
+          <div class="overflow-hidden">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-sm sm:text-lg font-bold text-white truncate">Центр Создателя Orbit</h2>
               <span class="creator-pill">Создатель Orbit</span>
             </div>
-            <p class="text-xs text-slate-400">Управление узлами, баланс ORB, ручная сборка и выдача NFT</p>
+            <p class="text-[11px] sm:text-xs text-slate-400 truncate">Управление узлами, баланс ORB, ручная сборка и выдача NFT</p>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button type="button" id="giftMyselfBtn" class="px-3.5 py-2 rounded-xl bg-purple-500/20 border border-purple-400/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold transition flex items-center gap-1.5">
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button type="button" id="giftMyselfBtn" class="px-3 py-2 rounded-xl bg-purple-500/20 border border-purple-400/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold transition flex items-center gap-1.5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Выдать себе
+            <span class="hidden sm:inline">Выдать себе</span>
           </button>
           <button id="closeAdminBtn" class="text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-white/5 transition">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -861,12 +917,12 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-2 p-2 mx-5 mt-4 rounded-xl bg-black/40 border border-rose-500/20">
+      <div class="grid grid-cols-2 p-1.5 mx-4 sm:mx-5 mt-3.5 rounded-xl bg-black/40 border border-rose-500/20">
         <button id="tabAdminUsers" type="button" class="py-2 text-xs font-semibold rounded-lg bg-rose-500/20 text-rose-400 transition">Все пользователи сети</button>
         <button id="tabAdminRooms" type="button" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-rose-400 transition">Каналы и Группы</button>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-5 max-w-5xl w-full mx-auto">
+      <div class="flex-1 overflow-y-auto p-4 sm:p-5 max-w-5xl w-full mx-auto">
         <div id="adminUsersList" class="space-y-2.5"></div>
         <div id="adminRoomsList" class="space-y-2.5 hidden"></div>
       </div>
@@ -925,7 +981,7 @@
             </div>
             <input type="file" id="avatarFileInput" accept="image/*" class="hidden" />
           </div>
-          <span class="text-[11px] text-sky-400 mt-1.5 cursor-pointer hover:underline" onclick="document.getElementById('avatarFileInput').click()">Загрузить фото с ПК</span>
+          <span class="text-[11px] text-sky-400 mt-1.5 cursor-pointer hover:underline" onclick="document.getElementById('avatarFileInput').click()">Загрузить фото с устройства</span>
         </div>
 
         <form id="settingsForm" class="space-y-3.5">
@@ -1006,14 +1062,14 @@
     </div>
 
     <!-- ЛЕВЫЙ ПАРЯЩИЙ ДОК: СПИСОК УЗЛОВ И ПРОСТРАНСТВ -->
-    <aside class="orbit-dock w-80 md:w-96 flex-shrink-0 flex flex-col h-full rounded-3xl relative z-10 overflow-hidden">
+    <aside id="sidebarDock" class="orbit-dock w-80 md:w-96 flex-shrink-0 flex flex-col h-full rounded-3xl relative z-10 overflow-hidden">
       <div class="p-3.5 flex items-center gap-2 border-b border-white/5 bg-white/[0.01]">
         <button id="openSettingsBtn" class="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-white/5 transition" title="Настройки">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <div class="relative flex-1">
           <input type="text" id="searchInput" placeholder="Поиск узлов и @тегов..." class="orbit-input w-full pl-8 pr-3 py-2 rounded-xl text-xs" />
-          <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
         <button id="openCreateRoomBtn" class="w-9 h-9 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-400 flex items-center justify-center transition flex-shrink-0" title="Создать канал или группу">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -1022,7 +1078,7 @@
 
       <!-- Карточка текущего пользователя -->
       <div id="myMiniBar" class="mx-3 my-2.5 px-3 py-2.5 rounded-2xl bg-gradient-to-r from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-400/20 flex items-center gap-2.5 cursor-pointer hover:bg-white/[0.06] transition" onclick="document.getElementById('openSettingsBtn').click()">
-        <img id="myMiniAvatar" src="" class="w-9 h-9 rounded-full object-cover border border-sky-400/60" />
+        <img id="myMiniAvatar" src="" class="w-9 h-9 rounded-full object-cover border border-sky-400/60 flex-shrink-0" />
         <div class="overflow-hidden flex-1">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span id="myMiniName" class="text-xs font-bold text-white truncate"></span>
@@ -1046,8 +1102,8 @@
     </aside>
 
     <!-- ПРАВЫЙ ПАРЯЩИЙ ДОК: ОКНО СВЯЗИ -->
-    <section class="orbit-dock flex-1 flex flex-col h-full rounded-3xl relative z-10 overflow-hidden">
-      <div id="chatPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none">
+    <section id="chatSectionDock" class="orbit-dock flex-1 flex flex-col h-full rounded-3xl relative z-10 overflow-hidden">
+      <div id="chatPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none p-4 text-center">
         <div class="w-16 h-16 rounded-3xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center mb-3">
           <svg class="w-8 h-8 text-sky-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         </div>
@@ -1057,31 +1113,36 @@
       <video id="liveVideoPreview" class="hidden" autoplay muted playsinline></video>
 
       <div id="activeChat" class="hidden flex-col h-full">
-        <!-- Шапка активного чата -->
-        <div id="chatHeaderBar" class="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition border-b border-white/10 bg-[#0d1729]/60 z-10">
-          <div class="flex items-center gap-3.5 overflow-hidden">
+        <!-- Шапка активного чата (с кнопкой Назад для телефонов) -->
+        <div id="chatHeaderBar" class="px-3.5 sm:px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition border-b border-white/10 bg-[#0d1729]/60 z-10 gap-2">
+          <div class="flex items-center gap-2.5 sm:gap-3.5 overflow-hidden">
+            <!-- Кнопка возврата к списку чатов (видна только на мобильных) -->
+            <button type="button" id="mobileBackBtn" onclick="event.stopPropagation(); window.closeMobileChat();" class="md:hidden p-2 -ml-1 rounded-xl bg-white/5 text-slate-200 hover:text-white flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+
             <div class="relative flex-shrink-0">
               <img id="chatPartnerAvatar" src="" class="w-10 h-10 rounded-full object-cover bg-slate-800 border border-white/10" />
               <span id="chatOnlineDot" class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0d1729]"></span>
             </div>
             <div class="flex flex-col overflow-hidden">
-              <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <span id="chatPartnerTypeBadge" class="hidden text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-semibold uppercase"></span>
                 <span id="chatPartnerName" class="text-sm font-bold text-white truncate"></span>
                 <span id="chatPartnerCreatorBadge" class="creator-pill hidden">Создатель Orbit</span>
-                <span id="chatPartnerUsernameBadge" class="text-[11px] text-sky-400 font-mono"></span>
+                <span id="chatPartnerUsernameBadge" class="text-[11px] text-sky-400 font-mono truncate"></span>
               </div>
               <span id="chatPartnerBioPreview" class="text-[11px] text-slate-400 truncate"></span>
             </div>
           </div>
 
-          <button id="headerQuickGiftBtn" type="button" onclick="event.stopPropagation(); window.openGiftShopForActivePartner();" class="px-3.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-semibold transition flex items-center gap-1.5 flex-shrink-0">
+          <button id="headerQuickGiftBtn" type="button" onclick="event.stopPropagation(); window.openGiftShopForActivePartner();" class="px-3 sm:px-3.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-semibold transition flex items-center gap-1.5 flex-shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-            Подарить
+            <span class="hidden sm:inline">Подарить</span>
           </button>
         </div>
 
-        <div id="messagesArea" class="flex-1 overflow-y-auto p-5 flex flex-col relative z-0"></div>
+        <div id="messagesArea" class="flex-1 overflow-y-auto p-3.5 sm:p-5 flex flex-col relative z-0"></div>
 
         <div id="attachmentPreviewBar" class="hidden px-4 py-2.5 bg-[#0d1729] border-t border-white/10 items-center justify-between gap-3 z-10">
           <div class="flex items-center gap-3 overflow-hidden">
@@ -1107,13 +1168,13 @@
 
         <div id="channelReadonlyBar" class="hidden bg-[#0d1729]/90 border-t border-white/10 py-3.5 px-4 text-center text-xs text-slate-400 select-none z-10">Информационный канал. Публиковать записи может только создатель.</div>
 
-        <form id="messageForm" class="bg-[#0d1729]/80 border-t border-white/10 px-3.5 py-2.5 flex items-end gap-2.5 z-10">
+        <form id="messageForm" class="bg-[#0d1729]/80 border-t border-white/10 px-2.5 sm:px-3.5 py-2.5 flex items-end gap-2 z-10">
           <input type="file" id="chatFileInput" class="hidden" />
-          <button type="button" id="attachBtn" class="p-2.5 text-slate-400 hover:text-sky-400 hover:bg-white/5 rounded-xl transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg></button>
+          <button type="button" id="attachBtn" class="p-2.5 text-slate-400 hover:text-sky-400 hover:bg-white/5 rounded-xl transition flex-shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg></button>
 
-          <textarea id="msgInput" rows="1" placeholder="Передать сообщение в сеть..." class="orbit-input flex-1 px-4 py-3 rounded-2xl text-sm placeholder-slate-400 resize-none overflow-hidden" style="min-height: 44px; max-height: 120px;"></textarea>
+          <textarea id="msgInput" rows="1" placeholder="Сообщение..." class="orbit-input flex-1 px-3.5 py-2.5 rounded-2xl text-sm placeholder-slate-400 resize-none overflow-hidden" style="min-height: 44px; max-height: 120px;"></textarea>
 
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 flex-shrink-0">
             <button type="submit" id="sendMsgBtn" class="hidden p-2.5 rounded-xl btn-primary flex items-center justify-center"><svg class="w-5 h-5 translate-x-[1px]" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
             <button type="button" id="recAudioBtn" class="p-2.5 text-slate-400 hover:text-emerald-400 hover:bg-white/5 rounded-xl transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg></button>
             <button type="button" id="recVideoBtn" class="p-2.5 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-xl transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
@@ -1184,17 +1245,30 @@
     }
     draw();
 
-    // 3D наклон карточки подарка при осмотре
+    // 3D наклон карточки подарка при осмотре (Мышь + Сенсорный экран смартфона)
     const stageEl = document.getElementById('giftInspectStage');
     const card3DEl = document.getElementById('giftInspectCard3D');
-    stageEl.addEventListener('mousemove', (e) => {
+
+    function handleStageTilt(clientX, clientY) {
       if (window.isUpgradingNow) return;
       const rect = stageEl.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width - 0.5) * 28;
-      const y = ((e.clientY - rect.top) / rect.height - 0.5) * -28;
+      const x = ((clientX - rect.left) / rect.width - 0.5) * 28;
+      const y = ((clientY - rect.top) / rect.height - 0.5) * -28;
       card3DEl.style.transform = `rotateY(${x}deg) rotateX(${y}deg) scale(1.06)`;
-    });
+    }
+
+    stageEl.addEventListener('mousemove', (e) => handleStageTilt(e.clientX, e.clientY));
+    stageEl.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches[0]) {
+        handleStageTilt(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
     stageEl.addEventListener('mouseleave', () => {
+      if (window.isUpgradingNow) return;
+      card3DEl.style.transform = `rotateY(0deg) rotateX(0deg) scale(1)`;
+    });
+    stageEl.addEventListener('touchend', () => {
       if (window.isUpgradingNow) return;
       card3DEl.style.transform = `rotateY(0deg) rotateX(0deg) scale(1)`;
     });
@@ -1237,6 +1311,11 @@
     window.closeGiftInspect = () => {
       if (window.isUpgradingNow) return;
       document.getElementById('giftInspectModal').classList.remove('open');
+    };
+
+    // Функция возврата к списку контактов на мобильных устройствах
+    window.closeMobileChat = () => {
+      document.getElementById('messengerContainer').classList.remove('mobile-chat-open');
     };
 
     window.addEventListener('keydown', e => {
@@ -1840,7 +1919,7 @@
     function showToast(text, err = false) {
       const t = document.getElementById('toast'), d = document.getElementById('toastDot');
       document.getElementById('toastText').textContent = text;
-      d.className = `w-2 h-2 rounded-full ${err ? 'bg-rose-500' : 'bg-sky-400'}`;
+      d.className = `w-2 h-2 rounded-full flex-shrink-0 ${err ? 'bg-rose-500' : 'bg-sky-400'}`;
       t.classList.remove('opacity-0', 'translate-y-[-12px]');
       setTimeout(() => t.classList.add('opacity-0', 'translate-y-[-12px]'), 2800);
     }
@@ -2286,7 +2365,8 @@
       } else {
         currentUser = null; currentUserData = null; activeTarget = null;
         if (unsubscribeMessages) unsubscribeMessages();
-        msgEl.classList.remove('active'); setTimeout(() => msgEl.style.display = 'none', 500);
+        msgEl.classList.remove('active', 'mobile-chat-open');
+        setTimeout(() => msgEl.style.display = 'none', 500);
         authEl.style.display = 'flex'; setTimeout(() => authEl.classList.add('active'), 50);
       }
     }
@@ -2474,7 +2554,6 @@
     window.adminTargetUid = null;
     window.adminTargetName = '';
 
-    // При изменении селекторов фона или модели в конструкторе — карточки в каталоге сразу меняют свой предпросмотр!
     document.getElementById('nftVariantSelect').onchange = () => renderGiftCatalogGrid();
     document.getElementById('nftBgSelect').onchange = () => renderGiftCatalogGrid();
 
@@ -2493,7 +2572,7 @@
         const isNft = item.type === 'nft';
         const counterKey = item.baseId || item.id;
         const nextSerialNum = String((giftCountersCache[counterKey] || 0) + 1).padStart(6, '0');
-        const priceLabel = isAdmin ? '0 ORB (Создатель)' : `${item.price} ORB`;
+        const priceLabel = isAdmin ? '0 ORB' : `${item.price} ORB`;
 
         const baseCol = BASE_COLLECTIONS.find(c => c.baseId === item.baseId) || BASE_COLLECTIONS[0];
         let previewVariant = baseCol.variants[1];
@@ -2565,8 +2644,8 @@
         currentGiftFilter = btn.dataset.gfilter;
         document.querySelectorAll('.gift-cat-tab').forEach(b => {
           b.className = b === btn
-            ? 'gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#2b5278] text-white transition'
-            : 'gift-cat-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+            ? 'gift-cat-tab flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold bg-[#2b5278] text-white transition'
+            : 'gift-cat-tab flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-white transition';
         });
         renderGiftCatalogGrid();
       };
@@ -2801,7 +2880,7 @@
               </div>
             </div>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 w-full sm:w-auto justify-end">
             <button type="button" class="admin-gift-btn px-3.5 py-1.5 bg-purple-500/25 text-purple-300 border border-purple-500/40 rounded-xl hover:bg-purple-500 hover:text-white transition text-xs font-semibold">
               Конструктор NFT / ORB
             </button>
@@ -2924,7 +3003,7 @@
 
         const creatorTag = (i.kind === 'dm' && isCreatorUser(i.username)) ? getCreatorBadgeHTML() : '';
         const publicGiftsCount = (i.gifts || []).filter(g => !g.hidden).length;
-        const giftCountBadge = publicGiftsCount > 0 ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">NFT ${publicGiftsCount}</span>` : '';
+        const giftCountBadge = publicGiftsCount > 0 ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex-shrink-0">NFT ${publicGiftsCount}</span>` : '';
 
         div.innerHTML = `
           <div class="relative flex-shrink-0">
@@ -3014,6 +3093,8 @@
       document.getElementById('chatPlaceholder').classList.add('hidden');
       document.getElementById('activeChat').classList.remove('hidden');
       document.getElementById('activeChat').classList.add('flex');
+      // Активируем мобильное переключение на экран чата
+      document.getElementById('messengerContainer').classList.add('mobile-chat-open');
       updateChatHeader(target);
 
       if (unsubscribeMessages) unsubscribeMessages();
@@ -3034,16 +3115,16 @@
 
             if (!isMine && target.kind !== 'dm') {
               const senderBadge = isCreatorUser(d.senderUsername) ? ` ${getCreatorBadgeHTML()}` : '';
-              bbl.innerHTML += `<div class="text-[11px] font-bold text-sky-400 flex items-center gap-1.5">${escapeHTML(target.kind === 'channel' ? target.title : d.senderName)}${senderBadge}</div>`;
+              bbl.innerHTML += `<div class="text-[11px] font-bold text-sky-400 flex items-center gap-1.5 flex-wrap">${escapeHTML(target.kind === 'channel' ? target.title : d.senderName)}${senderBadge}</div>`;
             }
 
             if (d.fileData && d.fileType?.startsWith('image/')) bbl.innerHTML += `<img src="${escapeHTML(d.fileData)}" class="rounded-xl max-h-56 object-contain cursor-pointer mx-auto" onclick="window.openLightbox('${escapeHTML(d.fileData)}')"/>`;
-            else if (d.fileData && d.fileType?.startsWith('video/')) bbl.innerHTML += `<video src="${escapeHTML(d.fileData)}" controls class="circle-video"></video>`;
+            else if (d.fileData && d.fileType?.startsWith('video/')) bbl.innerHTML += `<video src="${escapeHTML(d.fileData)}" controls playsinline class="circle-video"></video>`;
             else if (d.fileData && d.fileType?.startsWith('audio/')) bbl.innerHTML += `<audio src="${escapeHTML(d.fileData)}" controls></audio>`;
             else if (d.fileData) bbl.innerHTML += `<a href="${escapeHTML(d.fileData)}" download="${escapeHTML(d.fileName || 'file')}" class="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-white font-mono text-xs">${escapeHTML(d.fileName || 'Скачать файл')}</a>`;
 
             const time = d.createdAt ? new Date(d.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-            bbl.innerHTML += `<div class="flex justify-between items-end gap-3 mt-1"><span>${escapeHTML(d.text || '')}</span><span class="msg-time text-[10px] text-white/50">${time}</span></div>`;
+            bbl.innerHTML += `<div class="flex justify-between items-end gap-3 mt-1"><span>${escapeHTML(d.text || '')}</span><span class="msg-time text-[10px] text-white/50 flex-shrink-0">${time}</span></div>`;
 
             if (isMine) {
               const delBtn = document.createElement('button'); delBtn.className = 'delete-msg-btn text-rose-400 hover:text-rose-500'; delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
